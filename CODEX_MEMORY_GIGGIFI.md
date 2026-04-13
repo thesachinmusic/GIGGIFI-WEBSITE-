@@ -1,9 +1,114 @@
 # CLAUDE.md / CODEX_MEMORY.md
 ## Project: GIGGIFI Website
 ## Owner: Sachin / thesachinmusic
-## Last updated: 2026-04-13
+## Last updated: 2026-04-14
 
 This file is a working memory dump for Codex or any coding agent so it can continue the project without losing context.
+
+---
+
+# 0) Current Handoff Snapshot
+
+## Latest important commit
+- Current local `HEAD`: `c7d2c04`
+- Latest auth fix commit message:
+  `Use Twilio native OTP verification`
+
+## Current backend/auth state
+- The project is no longer using the live JSON mock flow as the main auth/data path.
+- Auth is now based on `NextAuth` + `Prisma` + PostgreSQL.
+- OTP flow was refactored to use Twilio Verify native OTP generation and verification.
+- The old Twilio `customCode` flow was removed because it caused:
+  `Custom code not allowed`
+- Login UI was also fixed so OTP is not verified twice anymore.
+
+## Current database state
+- Prisma is connected to one shared PostgreSQL database.
+- Seed/import was already run previously and the real DB contains starter users, artists, bookers, bookings, and payments.
+- All future real end-user data should go into this shared DB through Prisma.
+
+## Current Vercel state
+- Project: `giggifi-website`
+- Team: `thesachinmusics-projects`
+- Production deploys are coming from GitHub branch `main`
+- Latest important successful production deployment contains commit `c7d2c04`
+
+## Current live domains observed on Vercel
+- `https://giggifi.com`
+- `https://www.giggifi.com`
+- `https://giggifi-website.vercel.app`
+- `https://giggifi-website-thesachinmusics-projects.vercel.app`
+- `https://giggifi-website-git-main-thesachinmusics-projects.vercel.app`
+
+## Current auth issues remaining
+
+### Google login
+- Code is wired.
+- Main remaining issue is Google OAuth configuration, not app code.
+- Google login must be tested only on a stable public domain, not on random temporary deployment URLs.
+- The specific error seen was:
+  `redirect_uri_mismatch`
+- That happened because Google was asked to redirect to a temporary deployment URL like:
+  `https://giggifi-website-n6hj6mzkn-thesachinmusics-projects.vercel.app/api/auth/callback/google`
+- Those random deployment URLs should NOT be relied on for Google setup.
+
+### OTP login
+- OTP now works technically through Twilio Verify for numbers allowed by the Twilio account.
+- If OTP works only for the owner’s own verified number and not for public numbers, that means the Twilio account is still on `trial`.
+- Twilio trial accounts can only send SMS to numbers manually verified inside Twilio.
+- Public OTP for all users requires upgrading the Twilio account from trial to paid.
+
+## Required Google OAuth setup
+
+### Stable public domain choice
+- Prefer:
+  `https://giggifi.com`
+
+### Vercel env var expectation
+- `NEXTAUTH_URL` should be:
+  `https://giggifi.com`
+
+### Google OAuth authorized JavaScript origins
+- `https://giggifi.com`
+- `https://www.giggifi.com`
+- `https://giggifi-website.vercel.app`
+- `https://giggifi-website-thesachinmusics-projects.vercel.app`
+- `http://localhost:3000`
+
+### Google OAuth authorized redirect URIs
+- `https://giggifi.com/api/auth/callback/google`
+- `https://www.giggifi.com/api/auth/callback/google`
+- `https://giggifi-website.vercel.app/api/auth/callback/google`
+- `https://giggifi-website-thesachinmusics-projects.vercel.app/api/auth/callback/google`
+- `http://localhost:3000/api/auth/callback/google`
+
+## Required Twilio production note
+- Keep using Twilio Verify.
+- The app code is ready for Twilio-generated OTP codes.
+- Public OTP will still fail until the Twilio account is upgraded from trial.
+
+## Important files changed in the latest auth phase
+- `lib/otp.ts`
+- `lib/auth.ts`
+- `components/giggifi-app.tsx`
+- `middleware.ts`
+- `app/api/auth/send-otp/route.ts`
+- `app/api/auth/verify-otp/route.ts`
+- `SETUP_VERCEL_DATABASE.md`
+- `.env.example`
+
+## Important caution for future sessions
+- The user exposed `NEXTAUTH_SECRET` in chat/editor during setup.
+- That secret should be rotated in both:
+  - local `.env.local`
+  - Vercel environment variables
+
+## Best next steps from here
+1. Set Vercel `NEXTAUTH_URL` to `https://giggifi.com`
+2. Add the stable Google OAuth origins and callback URIs listed above
+3. Test Google login only from `https://giggifi.com/login`
+4. Upgrade Twilio from trial if public OTP is required
+5. After auth is fully stable, continue with payment integration readiness
 
 ---
 
@@ -479,4 +584,3 @@ Short version:
 - Current real blocker is wrong GitHub repo structure, causing Vercel not to find the `app` directory.
 - Fix the GitHub push first.
 - After deployment succeeds, perform a full product/UX/feature audit and then implement real auth/payment/OTP.
-
