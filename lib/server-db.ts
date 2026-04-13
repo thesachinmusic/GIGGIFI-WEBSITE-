@@ -11,7 +11,9 @@ import {
   createInitialDatabase,
 } from "@/lib/mock-data";
 
-const dbFile = path.join(process.cwd(), "data", "mock-db.json");
+const dbFile = process.env.VERCEL
+  ? path.join("/tmp", "giggifi", "mock-db.json")
+  : path.join(process.cwd(), "data", "mock-db.json");
 
 async function ensureDb() {
   await mkdir(path.dirname(dbFile), { recursive: true });
