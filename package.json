@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:env": "node scripts/check-env.mjs",
     "prisma:generate": "prisma generate",
     "prisma:seed": "node prisma/seed.mjs"
   },
