@@ -75,6 +75,10 @@ type Props = {
   initialDb: MockDatabase;
   initialSession: SessionPayload | null;
   pendingPhone: string | null;
+  authProviders: {
+    googleEnabled: boolean;
+    otpMode: "twilio" | "preview" | "unavailable";
+  };
 };
 
 const cityOptions = ["Mumbai", "Pune", "Bengaluru", "Delhi"];
@@ -191,6 +195,7 @@ export function GiggiFiApp({
   initialDb,
   initialSession,
   pendingPhone,
+  authProviders,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -231,6 +236,7 @@ export function GiggiFiApp({
     ? db.carts.find((item) => item.bookerId === viewerBooker.id)
     : undefined;
   const nextQuery = searchParams.get("next");
+  const authError = searchParams.get("error");
 
   async function refreshFromServer(nextPath?: string) {
     startTransition(() => {
@@ -351,6 +357,8 @@ export function GiggiFiApp({
             <LoginPage
               initialPhone={session?.phone ?? pendingPhone ?? ""}
               nextPath={nextQuery}
+              authError={authError}
+              authProviders={authProviders}
               onDone={async (path) => {
                 setToast("Welcome to GiggiFi.");
                 await refreshFromServer(path);
@@ -1322,10 +1330,17 @@ function ArtistCard({
 function LoginPage({
   initialPhone,
   nextPath,
+  authError,
+  authProviders,
   onDone,
 }: {
   initialPhone: string;
   nextPath: string | null;
+  authError: string | null;
+  authProviders: {
+    googleEnabled: boolean;
+    otpMode: "twilio" | "preview" | "unavailable";
+  };
   onDone: (path: string) => Promise<void>;
 }) {
   const [phone, setPhone] = useState(initialPhone || "");
@@ -1335,6 +1350,8 @@ function LoginPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewOtp, setPreviewOtp] = useState("");
+  const otpUnavailable = authProviders.otpMode === "unavailable";
+  const googleUnavailable = !authProviders.googleEnabled;
 
   useEffect(() => {
     if (!countdown) return;
@@ -1342,7 +1359,28 @@ function LoginPage({
     return () => window.clearTimeout(timer);
   }, [countdown]);
 
+  useEffect(() => {
+    if (!authError) {
+      return;
+    }
+
+    const messages: Record<string, string> = {
+      AccessDenied: "Google login was denied. Please try again.",
+      Configuration: "Google login is not configured correctly yet.",
+      OAuthAccountNotLinked: "This email is already linked to another sign-in method.",
+      OAuthCallback: "Google login could not be completed. Please try again.",
+      default: "Login could not be completed. Please try again.",
+    };
+
+    setError(messages[authError] ?? messages.default);
+  }, [authError]);
+
   async function sendOtp() {
+    if (otpUnavailable) {
+      setError("OTP login is not available yet. Add Twilio credentials or use Google login.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
@@ -1356,6 +1394,7 @@ function LoginPage({
       setOtpSent(true);
       setCountdown(60);
       setPreviewOtp(response.previewOtp ?? "");
+      setOtp(Array.from({ length: 6 }, () => ""));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send OTP.");
     } finally {
@@ -1367,18 +1406,26 @@ function LoginPage({
     setLoading(true);
     setError("");
     try {
+      const verification = await jsonRequest<{
+        success: boolean;
+        redirect: string;
+      }>("/api/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ phone, otp: otp.join("") }),
+      });
+
       const result = await signIn("phone-otp", {
         phone,
         otp: otp.join(""),
         redirect: false,
-        callbackUrl: nextPath || "/onboarding/choice",
+        callbackUrl: verification.redirect || nextPath || "/onboarding/choice",
       });
 
       if (!result || result.error) {
         throw new Error(result?.error === "CredentialsSignin" ? "Incorrect OTP." : result?.error ?? "Could not verify OTP.");
       }
 
-      await onDone(nextPath || "/onboarding/choice");
+      await onDone(verification.redirect || nextPath || "/onboarding/choice");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not verify OTP.");
     } finally {
@@ -1399,6 +1446,12 @@ function LoginPage({
           </p>
         </div>
 
+        {otpUnavailable ? (
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-left text-sm text-amber-100">
+            OTP login is currently unavailable on this environment because Twilio Verify is not configured yet.
+          </div>
+        ) : null}
+
         <div className="text-left">
           <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-white/40">Phone</label>
           <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
@@ -1416,13 +1469,23 @@ function LoginPage({
         </div>
 
         {!otpSent ? (
-          <button disabled={loading} onClick={sendOtp} className={`${gradientClass} h-12 w-full rounded-2xl font-semibold text-black`}>
-            {loading ? "Sending..." : "Get My OTP"}
+          <button disabled={loading || otpUnavailable} onClick={sendOtp} className={`${gradientClass} h-12 w-full rounded-2xl font-semibold text-black disabled:cursor-not-allowed disabled:opacity-60`}>
+            {loading ? "Sending..." : authProviders.otpMode === "twilio" ? "Get My OTP" : "Get Test OTP"}
           </button>
         ) : (
           <div className="space-y-4 text-left">
             <label className="block text-xs uppercase tracking-[0.18em] text-white/40">OTP</label>
-            <div className="flex gap-2">
+            <div
+              className="flex gap-2"
+              onPaste={(event) => {
+                const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                if (!pasted) return;
+                event.preventDefault();
+                setOtp((current) =>
+                  current.map((_, index) => pasted[index] ?? ""),
+                );
+              }}
+            >
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -1435,7 +1498,15 @@ function LoginPage({
                       nextInput?.focus();
                     }
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Backspace" && !otp[index] && index > 0) {
+                      const prevInput = document.getElementById(`otp-${index - 1}`);
+                      prevInput?.focus();
+                    }
+                  }}
                   id={`otp-${index}`}
+                  inputMode="numeric"
+                  autoComplete={index === 0 ? "one-time-code" : "off"}
                   className="h-14 w-14 rounded-2xl border border-white/10 bg-black/20 text-center text-xl outline-none focus:border-white/20"
                 />
               ))}
@@ -1466,11 +1537,18 @@ function LoginPage({
         </div>
 
         <button
-          disabled={loading}
-          className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 text-white disabled:opacity-60"
-          onClick={() => signIn("google", { callbackUrl: nextPath || "/onboarding/choice" })}
+          disabled={loading || googleUnavailable}
+          className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 text-white disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => {
+            if (googleUnavailable) {
+              setError("Google login is not configured yet.");
+              return;
+            }
+
+            void signIn("google", { callbackUrl: nextPath || "/onboarding/choice" });
+          }}
         >
-          Continue with Google
+          {googleUnavailable ? "Google login unavailable" : "Continue with Google"}
         </button>
 
         {error ? <div className="text-sm text-red-300">{error}</div> : null}

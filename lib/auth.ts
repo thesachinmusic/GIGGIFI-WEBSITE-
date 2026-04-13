@@ -7,11 +7,18 @@ import { getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
-import { verifyOtpChallenge } from "@/lib/otp";
+import { getOtpMode, verifyOtpChallenge } from "@/lib/otp";
 import { normalizeIndianPhone, verifyOtpSchema } from "@/lib/validations";
 
-function googleEnabled() {
+export function isGoogleAuthEnabled() {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+export function getAuthProviderFlags() {
+  return {
+    googleEnabled: isGoogleAuthEnabled(),
+    otpMode: getOtpMode(),
+  };
 }
 
 async function findSessionUser(userId: string) {
@@ -66,7 +73,7 @@ async function ensureOtpUser(phone: string) {
 
 const providers = [];
 
-if (googleEnabled()) {
+if (isGoogleAuthEnabled()) {
   providers.push(
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,

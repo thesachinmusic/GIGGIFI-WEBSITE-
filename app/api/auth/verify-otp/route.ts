@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildDashboardPath } from "@/lib/auth-routing";
+import { buildDashboardPath, hasCompletedRoleProfile } from "@/lib/auth-routing";
 import { verifyOtpChallenge } from "@/lib/otp";
 import { prisma } from "@/lib/prisma";
 import { verifyOtpSchema } from "@/lib/validations";
@@ -21,13 +21,27 @@ export async function POST(request: Request) {
     await verifyOtpChallenge(parsed.data.phone, parsed.data.otp, false);
     const existingUser = await prisma.user.findUnique({
       where: { phone: parsed.data.phone },
-      select: { role: true },
+      select: {
+        role: true,
+        artistProfile: { select: { id: true } },
+        bookerProfile: { select: { id: true } },
+      },
     });
+
+    const redirect =
+      existingUser &&
+      hasCompletedRoleProfile({
+        role: existingUser.role,
+        hasArtistProfile: Boolean(existingUser.artistProfile),
+        hasBookerProfile: Boolean(existingUser.bookerProfile),
+      })
+        ? buildDashboardPath(existingUser.role)
+        : "/onboarding/choice";
 
     return NextResponse.json({
       success: true,
       existingUser: Boolean(existingUser),
-      redirect: buildDashboardPath(existingUser?.role),
+      redirect,
       role: existingUser?.role ?? null,
       signInProvider: "phone-otp",
     });

@@ -28,7 +28,13 @@ async function sendViaTwilio(phone: string, otp: string) {
   const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
 
   if (!accountSid || !authToken || !verifyServiceSid) {
-    return { provider: "mock" as const };
+    if (shouldRevealOtpPreview()) {
+      return { provider: "mock" as const };
+    }
+
+    throw new Error(
+      "OTP login is not configured yet. Add Twilio Verify credentials or use Google login.",
+    );
   }
 
   const client = Twilio(accountSid, authToken);
@@ -44,6 +50,26 @@ async function sendViaTwilio(phone: string, otp: string) {
 
 export function shouldRevealOtpPreview() {
   return process.env.NODE_ENV !== "production" && process.env.DEV_SHOW_OTP_PREVIEW === "true";
+}
+
+export function isTwilioOtpEnabled() {
+  return Boolean(
+    process.env.TWILIO_ACCOUNT_SID &&
+      process.env.TWILIO_AUTH_TOKEN &&
+      process.env.TWILIO_VERIFY_SERVICE_SID,
+  );
+}
+
+export function getOtpMode() {
+  if (isTwilioOtpEnabled()) {
+    return "twilio" as const;
+  }
+
+  if (shouldRevealOtpPreview()) {
+    return "preview" as const;
+  }
+
+  return "unavailable" as const;
 }
 
 export async function issueOtpChallenge(rawPhone: string, userId?: string) {
