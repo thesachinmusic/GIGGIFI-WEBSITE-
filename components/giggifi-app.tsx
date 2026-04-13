@@ -2757,7 +2757,7 @@ function BookingDetailPage({
         </GlassCard>
         <GlassCard className="space-y-4 lg:sticky lg:top-36 lg:self-start">
           <a href={`/api/bookings/${booking.id}/contract`} target="_blank" className={`${gradientClass} block rounded-2xl px-5 py-3 text-center font-semibold text-black`}>
-            Download contract PDF
+            View printable contract
           </a>
           {session?.role === "BOOKER" && booking.status === "QUOTE_RECEIVED" ? (
             <button className="rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white" onClick={() => onUpdate({ action: "accept_quote" })}>

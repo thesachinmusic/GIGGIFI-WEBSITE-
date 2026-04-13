@@ -1,8 +1,45 @@
+import fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+
+function loadEnvFile(fileName) {
+  const envPath = path.resolve(process.cwd(), fileName);
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+
+  const contents = fs.readFileSync(envPath, "utf8");
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const equalsIndex = line.indexOf("=");
+    if (equalsIndex === -1) {
+      continue;
+    }
+
+    const key = line.slice(0, equalsIndex).trim();
+    let value = line.slice(equalsIndex + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (!(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile(".env.local");
 
 const connectionString =
   process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/giggifi";
@@ -33,25 +70,29 @@ async function loadMockDb() {
 }
 
 async function clearDatabase() {
-  await prisma.$transaction([
-    prisma.session.deleteMany(),
-    prisma.account.deleteMany(),
-    prisma.verificationToken.deleteMany(),
-    prisma.notification.deleteMany(),
-    prisma.savedArtist.deleteMany(),
-    prisma.cart.deleteMany(),
-    prisma.review.deleteMany(),
-    prisma.payment.deleteMany(),
-    prisma.bookingMessage.deleteMany(),
-    prisma.booking.deleteMany(),
-    prisma.bookingDraft.deleteMany(),
-    prisma.onboardingDraft.deleteMany(),
-    prisma.kYCDocument.deleteMany(),
-    prisma.artistProfile.deleteMany(),
-    prisma.bookerProfile.deleteMany(),
-    prisma.otpChallenge.deleteMany(),
-    prisma.user.deleteMany(),
-  ]);
+  const deletes = [
+    () => prisma.session.deleteMany(),
+    () => prisma.account.deleteMany(),
+    () => prisma.verificationToken.deleteMany(),
+    () => prisma.notification.deleteMany(),
+    () => prisma.savedArtist.deleteMany(),
+    () => prisma.cart.deleteMany(),
+    () => prisma.review.deleteMany(),
+    () => prisma.payment.deleteMany(),
+    () => prisma.bookingMessage.deleteMany(),
+    () => prisma.booking.deleteMany(),
+    () => prisma.bookingDraft.deleteMany(),
+    () => prisma.onboardingDraft.deleteMany(),
+    () => prisma.kYCDocument.deleteMany(),
+    () => prisma.artistProfile.deleteMany(),
+    () => prisma.bookerProfile.deleteMany(),
+    () => prisma.otpChallenge.deleteMany(),
+    () => prisma.user.deleteMany(),
+  ];
+
+  for (const runDelete of deletes) {
+    await runDelete();
+  }
 }
 
 async function seed() {
@@ -193,21 +234,6 @@ async function seed() {
     });
   }
 
-  for (const review of mockDb.reviews) {
-    await prisma.review.create({
-      data: {
-        id: review.id,
-        bookingId: review.bookingId,
-        fromId: review.fromId,
-        toId: review.toId,
-        rating: review.rating,
-        comment: review.comment,
-        eventType: review.eventType ?? null,
-        createdAt: new Date(review.createdAt),
-      },
-    });
-  }
-
   for (const booking of mockDb.bookings) {
     await prisma.booking.create({
       data: {
@@ -263,6 +289,21 @@ async function seed() {
             createdAt: new Date(message.createdAt),
           })),
         },
+      },
+    });
+  }
+
+  for (const review of mockDb.reviews) {
+    await prisma.review.create({
+      data: {
+        id: review.id,
+        bookingId: review.bookingId,
+        fromId: review.fromId,
+        toId: review.toId,
+        rating: review.rating,
+        comment: review.comment,
+        eventType: review.eventType ?? null,
+        createdAt: new Date(review.createdAt),
       },
     });
   }
