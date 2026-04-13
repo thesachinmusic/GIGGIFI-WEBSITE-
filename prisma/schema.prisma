@@ -4,13 +4,18 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
   ARTIST
   BOOKER
   ADMIN
+}
+
+enum OnboardingState {
+  ROLE_SELECTION
+  PROFILE_IN_PROGRESS
+  COMPLETE
 }
 
 enum UserStatus {
@@ -41,9 +46,17 @@ enum EscrowStatus {
 
 enum PaymentStatus {
   PENDING
+  REQUIRES_ACTION
   PAID
   FAILED
   REFUNDED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  STRIPE
+  MANUAL
 }
 
 enum DocType {
@@ -83,30 +96,46 @@ enum BookingStatus {
   RESOLVED
 }
 
+enum ChatActor {
+  ARTIST
+  BOOKER
+  ADMIN
+  SYSTEM
+}
+
 model User {
-  id            String       @id @default(cuid())
-  email         String?      @unique
-  phone         String       @unique
-  role          Role
-  status        UserStatus   @default(PENDING_VERIFICATION)
-  otpCode       String?
-  otpExpiry     DateTime?
-  emailVerified Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  artistProfile ArtistProfile?
-  bookerProfile BookerProfile?
-  notifications Notification[]
-  kycDocuments  KYCDocument[]
+  id              String            @id @default(cuid())
+  name            String?
+  email           String?           @unique
+  phone           String?           @unique
+  image           String?
+  role            Role?
+  status          UserStatus        @default(PENDING_VERIFICATION)
+  onboardingState OnboardingState   @default(ROLE_SELECTION)
+  emailVerified   DateTime?
+  phoneVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  artistProfile   ArtistProfile?
+  bookerProfile   BookerProfile?
+  notifications   Notification[]
+  kycDocuments    KYCDocument[]
+  otpChallenges   OtpChallenge[]
+  onboardingDraft OnboardingDraft?
+  bookingDrafts   BookingDraft[]
+  accounts        Account[]
+  sessions        Session[]
 }
 
 model ArtistProfile {
-  id                  String     @id @default(cuid())
-  userId              String     @unique
-  user                User       @relation(fields: [userId], references: [id])
+  id                  String        @id @default(cuid())
+  userId              String        @unique
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   legalName           String
   stageName           String
-  dateOfBirth         DateTime
-  gender              String
+  dateOfBirth         DateTime?
+  gender              String?
   profilePhoto        String?
   coverPhoto          String?
   city                String
@@ -117,27 +146,22 @@ model ArtistProfile {
   genres              String[]
   languages           String[]
   performanceTypes    String[]
-  yearsExperience     Int        @default(0)
+  yearsExperience     Int           @default(0)
   bio                 String?
   notableClients      String?
   portfolioPhotos     String[]
   portfolioVideos     String[]
   audioSamples        String[]
-  instagramUrl        String?
-  youtubeUrl          String?
-  spotifyUrl          String?
-  facebookUrl         String?
-  websiteUrl          String?
-  basePriceSolo       Int        @default(0)
+  basePriceSolo       Int           @default(0)
   basePriceBand       Int?
   basePriceDJ         Int?
-  travelIncluded      String     @default("NEGOTIABLE")
-  accommodationNeeded Boolean    @default(false)
-  minAdvanceBooking   Int        @default(7)
+  travelIncluded      String        @default("NEGOTIABLE")
+  accommodationNeeded Boolean       @default(false)
+  minAdvanceBooking   Int           @default(7)
   blackoutDates       DateTime[]
-  availableWeekdays   Boolean    @default(true)
-  availableWeekends   Boolean    @default(true)
-  isAvailable         Boolean    @default(true)
+  availableWeekdays   Boolean       @default(true)
+  availableWeekends   Boolean       @default(true)
+  isAvailable         Boolean       @default(true)
   aadhaarNumber       String?
   panNumber           String?
   gstNumber           String?
@@ -146,39 +170,54 @@ model ArtistProfile {
   bankAccountName     String?
   stripeAccountId     String?
   razorpayAccountId   String?
-  kycStatus           KYCStatus  @default(PENDING)
-  onboardingStep      Int        @default(1)
-  rating              Float      @default(0)
-  totalBookings       Int        @default(0)
+  kycStatus           KYCStatus     @default(PENDING)
+  onboardingStep      Int           @default(1)
+  rating              Float         @default(0)
+  totalBookings       Int           @default(0)
   termsAcceptedAt     DateTime?
-  createdAt           DateTime   @default(now())
+  featuredTag         String?
+  tagline             String?
+  packages            Json?
+  socials             Json?
+  mediaVault          Json?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  bookings            Booking[]
+  savedBy             SavedArtist[]
 }
 
 model BookerProfile {
-  id              String     @id @default(cuid())
-  userId          String     @unique
-  user            User       @relation(fields: [userId], references: [id])
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName        String
   email           String
   companyName     String?
-  bookerType      BookerType @default(INDIVIDUAL)
+  bookerType      BookerType    @default(INDIVIDUAL)
   city            String?
   state           String?
-  kycVerified     Boolean    @default(false)
+  kycVerified     Boolean       @default(false)
   termsAcceptedAt DateTime?
-  createdAt       DateTime   @default(now())
+  howHeard        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  bookings        Booking[]
+  savedArtists    SavedArtist[]
+  cart            Cart?
 }
 
 model Booking {
-  id              String        @id @default(cuid())
+  id              String         @id @default(cuid())
   bookerId        String
   artistId        String
+  booker          BookerProfile  @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  artist          ArtistProfile  @relation(fields: [artistId], references: [id], onDelete: Cascade)
   bookingType     BookingType
-  status          BookingStatus @default(ENQUIRY_SENT)
+  status          BookingStatus  @default(ENQUIRY_SENT)
   eventName       String
   eventType       String
   eventDate       DateTime
-  isFlexibleDate  Boolean       @default(false)
+  isFlexibleDate  Boolean        @default(false)
   alternateDates  DateTime[]
   eventStartTime  String?
   eventEndTime    String?
@@ -192,10 +231,10 @@ model Booking {
   performanceType String?
   languagePref    String[]
   specialRequests String?
-  soundAvailable  Boolean       @default(false)
-  lightAvailable  Boolean       @default(false)
-  travelArranged  Boolean       @default(false)
-  accomProvided   Boolean       @default(false)
+  soundAvailable  Boolean        @default(false)
+  lightAvailable  Boolean        @default(false)
+  travelArranged  Boolean        @default(false)
+  accomProvided   Boolean        @default(false)
   budgetMin       Int?
   budgetMax       Int?
   contactPerson   String?
@@ -207,38 +246,63 @@ model Booking {
   platformFee     Int?
   gstAmount       Int?
   artistPayout    Int?
-  escrowStatus    EscrowStatus  @default(NOT_INITIATED)
+  escrowStatus    EscrowStatus   @default(NOT_INITIATED)
   contractUrl     String?
-  payment         Payment?
   disputeReason   String?
   cancelReason    String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  quickBookPackage String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  payment         Payment?
+  messages        BookingMessage[]
+  reviews         Review[]
+
+  @@index([bookerId])
+  @@index([artistId])
+  @@index([status])
+}
+
+model BookingMessage {
+  id        String    @id @default(cuid())
+  bookingId String
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actor     ChatActor
+  body      String
+  createdAt DateTime  @default(now())
+
+  @@index([bookingId, createdAt])
 }
 
 model Payment {
-  id                    String        @id @default(cuid())
-  bookingId             String        @unique
-  booking               Booking       @relation(fields: [bookingId], references: [id])
-  razorpayOrderId       String?
-  razorpayPaymentId     String?
-  stripePaymentIntentId String?
+  id                    String          @id @default(cuid())
+  bookingId             String          @unique
+  booking               Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  provider              PaymentProvider?
+  providerOrderId       String?
+  providerPaymentId     String?
+  providerStatus        String?
+  transactionReference  String?
+  failureCode           String?
+  failureMessage        String?
   amount                Int
   platformFee           Int
   gstAmount             Int
   artistPayout          Int
-  status                PaymentStatus @default(PENDING)
+  status                PaymentStatus   @default(PENDING)
+  initiatedAt           DateTime        @default(now())
+  authorizedAt          DateTime?
   paidAt                DateTime?
   releasedAt            DateTime?
   refundedAt            DateTime?
   refundAmount          Int?
-  createdAt             DateTime      @default(now())
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 }
 
 model KYCDocument {
   id                 String             @id @default(cuid())
   userId             String
-  user               User               @relation(fields: [userId], references: [id])
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   type               DocType
   fileUrl            String
   verificationStatus VerificationStatus @default(PENDING)
@@ -246,34 +310,136 @@ model KYCDocument {
   reviewedAt         DateTime?
   reviewedBy         String?
   createdAt          DateTime           @default(now())
+
+  @@index([userId])
 }
 
 model Review {
   id        String   @id @default(cuid())
   bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   fromId    String
   toId      String
   rating    Float
   comment   String
   eventType String?
   createdAt DateTime @default(now())
+
+  @@index([bookingId])
 }
 
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   body      String
   type      String
   read      Boolean  @default(false)
   actionUrl String?
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model SavedArtist {
-  id       String   @id @default(cuid())
+  id       String        @id @default(cuid())
   bookerId String
   artistId String
-  savedAt  DateTime @default(now())
+  booker   BookerProfile @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  artist   ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  savedAt  DateTime      @default(now())
+
+  @@unique([bookerId, artistId])
+  @@index([bookerId])
+  @@index([artistId])
+}
+
+model Cart {
+  id        String        @id @default(cuid())
+  bookerId  String        @unique
+  booker    BookerProfile @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  artistIds String[]
+  occasion  String?
+  city      String?
+  updatedAt DateTime      @updatedAt
+  createdAt DateTime      @default(now())
+}
+
+model OnboardingDraft {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role
+  step      Int
+  data      Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model BookingDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistId  String
+  data      Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([userId, artistId])
+  @@index([userId])
+}
+
+model OtpChallenge {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  codeHash    String
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  consumedAt  DateTime?
+  requestedAt DateTime @default(now())
+  lastTriedAt DateTime?
+
+  @@index([expiresAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  oauth_token_secret String?
+  oauth_token       String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

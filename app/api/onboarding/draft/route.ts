@@ -1,23 +1,25 @@
 import { NextResponse } from "next/server";
-import { getPendingPhoneFromCookies, getSessionFromCookies } from "@/lib/session";
-import { readDb, updateDb } from "@/lib/server-db";
+import { getServerAuthSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getOnboardingDraft, saveOnboardingDraft } from "@/lib/services/profile-service";
 import { onboardingDraftSchema } from "@/lib/validations";
 
 export async function GET() {
-  const pendingPhone = getPendingPhoneFromCookies() ?? getSessionFromCookies()?.phone;
-  if (!pendingPhone) {
+  const session = await getServerAuthSession();
+  if (!session?.user?.id) {
     return NextResponse.json({ draft: null });
   }
-  const db = await readDb();
+
+  const draft = await getOnboardingDraft(session.user.id);
   return NextResponse.json({
-    draft: db.onboardingDrafts.find((item) => item.phone === pendingPhone) ?? null,
+    draft,
   });
 }
 
 export async function POST(request: Request) {
-  const pendingPhone = getPendingPhoneFromCookies() ?? getSessionFromCookies()?.phone;
-  if (!pendingPhone) {
-    return NextResponse.json({ error: "No verified phone found." }, { status: 401 });
+  const session = await getServerAuthSession();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Login required." }, { status: 401 });
   }
 
   const body = await request.json();
@@ -26,16 +28,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save draft." }, { status: 400 });
   }
 
-  await updateDb((db) => {
-    db.onboardingDrafts = db.onboardingDrafts.filter((item) => item.phone !== pendingPhone);
-    db.onboardingDrafts.push({
-      phone: pendingPhone,
-      role: parsed.data.role,
-      step: parsed.data.step,
-      data: parsed.data.data,
-      updatedAt: new Date().toISOString(),
-    });
+  const user = await prisma.user.update({
+    where: { id: session.user.id },
+    data: {
+      onboardingState: "PROFILE_IN_PROGRESS",
+    },
   });
+
+  await saveOnboardingDraft(user.id, parsed.data);
 
   return NextResponse.json({ success: true });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { applyPendingPhone, applySession } from "@/lib/session";
-import { readDb, updateDb } from "@/lib/server-db";
-import { buildDashboardPath } from "@/lib/mock-data";
+import { buildDashboardPath } from "@/lib/auth-routing";
+import { verifyOtpChallenge } from "@/lib/otp";
+import { prisma } from "@/lib/prisma";
 import { verifyOtpSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -17,47 +17,26 @@ export async function POST(request: Request) {
     );
   }
 
-  const db = await readDb();
-  const otpRequest = db.otpRequests.find((item) => item.phone === parsed.data.phone);
-
-  if (!otpRequest || otpRequest.otp !== parsed.data.otp) {
-    return NextResponse.json({ error: "Incorrect OTP." }, { status: 400 });
-  }
-
-  if (new Date(otpRequest.expiresAt).getTime() < Date.now()) {
-    return NextResponse.json({ error: "OTP expired. Please resend." }, { status: 400 });
-  }
-
-  const existingUser = db.users.find((item) => item.phone === parsed.data.phone);
-  const response = NextResponse.json(
-    existingUser
-      ? {
-          success: true,
-          existingUser: true,
-          redirect: buildDashboardPath(existingUser.role),
-          role: existingUser.role,
-        }
-      : {
-          success: true,
-          existingUser: false,
-          redirect: "/onboarding/choice",
-        },
-  );
-
-  if (existingUser) {
-    applySession(response, {
-      userId: existingUser.id,
-      role: existingUser.role,
-      phone: existingUser.phone,
-      name: existingUser.name,
+  try {
+    await verifyOtpChallenge(parsed.data.phone, parsed.data.otp, false);
+    const existingUser = await prisma.user.findUnique({
+      where: { phone: parsed.data.phone },
+      select: { role: true },
     });
-  } else {
-    applyPendingPhone(response, parsed.data.phone);
+
+    return NextResponse.json({
+      success: true,
+      existingUser: Boolean(existingUser),
+      redirect: buildDashboardPath(existingUser?.role),
+      role: existingUser?.role ?? null,
+      signInProvider: "phone-otp",
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Could not verify OTP.",
+      },
+      { status: 400 },
+    );
   }
-
-  await updateDb((next) => {
-    next.otpRequests = next.otpRequests.filter((item) => item.phone !== parsed.data.phone);
-  });
-
-  return response;
 }

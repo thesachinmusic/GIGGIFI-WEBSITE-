@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateOtp, updateDb } from "@/lib/server-db";
+import { issueOtpChallenge } from "@/lib/otp";
 import { sendOtpSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -15,25 +15,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const otp = generateOtp();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const result = await issueOtpChallenge(parsed.data.phone);
 
-  await updateDb((db) => {
-    db.otpRequests = db.otpRequests.filter((item) => item.phone !== parsed.data.phone);
-    db.otpRequests.push({
-      phone: parsed.data.phone,
-      otp,
-      expiresAt,
-    });
-  });
-
-  const message = `Your GiggiFi OTP is ${otp}. Valid for 5 minutes.`;
   return NextResponse.json({
     success: true,
     message: "OTP sent",
-    previewOtp: otp,
-    expiresAt,
-    provider: process.env.TWILIO_ACCOUNT_SID ? "twilio" : "mock",
-    notificationCopy: message,
+    previewOtp: result.previewOtp,
+    expiresAt: result.expiresAt.toISOString(),
+    provider: result.provider,
   });
 }

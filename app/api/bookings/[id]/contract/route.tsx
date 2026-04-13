@@ -7,8 +7,9 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import { NextResponse } from "next/server";
+import { getServerAuthSession } from "@/lib/auth";
 import { bookingStatusLabels, formatINR } from "@/lib/mock-data";
-import { readDb } from "@/lib/server-db";
+import { getAuthorizedBooking } from "@/lib/services/booking-service";
 
 interface Context {
   params: { id: string };
@@ -25,13 +26,27 @@ const styles = StyleSheet.create({
 });
 
 export async function GET(_request: Request, context: Context) {
-  const db = await readDb();
-  const booking = db.bookings.find((item) => item.id === context.params.id);
+  const session = await getServerAuthSession();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Login required." }, { status: 401 });
+  }
+
+  let result;
+  try {
+    result = await getAuthorizedBooking(context.params.id, session.user.id);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error && error.message === "FORBIDDEN" ? "Forbidden." : "Booking not found." },
+      { status: error instanceof Error && error.message === "FORBIDDEN" ? 403 : 404 },
+    );
+  }
+
+  const booking = result.booking;
   if (!booking) {
     return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   }
-  const artist = db.artists.find((item) => item.id === booking.artistId);
-  const booker = db.bookers.find((item) => item.id === booking.bookerId);
+  const artist = booking.artist;
+  const booker = booking.booker;
 
   const buffer = await renderToBuffer(
     <Document>
@@ -47,8 +62,8 @@ export async function GET(_request: Request, context: Context) {
 
         <View style={styles.section}>
           <Text style={styles.label}>Parties</Text>
-          <Text style={styles.value}>Artist: {artist?.stageName ?? "Artist"}</Text>
-          <Text style={styles.value}>Booker: {booker?.fullName ?? "Booker"}</Text>
+          <Text style={styles.value}>Artist: {artist.stageName}</Text>
+          <Text style={styles.value}>Booker: {booker.fullName}</Text>
         </View>
 
         <View style={styles.section}>

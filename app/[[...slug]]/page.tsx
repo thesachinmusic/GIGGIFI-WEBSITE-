@@ -1,6 +1,6 @@
 import { GiggiFiApp } from "@/components/giggifi-app";
-import { getPendingPhoneFromCookies, getSessionFromCookies } from "@/lib/session";
-import { readDb } from "@/lib/server-db";
+import { getServerAuthSession } from "@/lib/auth";
+import { loadAppData } from "@/lib/app-data";
 
 export const dynamic = "force-dynamic";
 
@@ -9,16 +9,23 @@ export default async function RoutedPage({
 }: {
   params: { slug?: string[] };
 }) {
-  const db = await readDb();
-  const session = getSessionFromCookies();
-  const pendingPhone = getPendingPhoneFromCookies();
+  const [db, session] = await Promise.all([loadAppData(), getServerAuthSession()]);
 
   return (
     <GiggiFiApp
       slug={params.slug ?? []}
       initialDb={db}
-      initialSession={session}
-      pendingPhone={pendingPhone}
+      initialSession={
+        session?.user?.id
+          ? {
+              userId: session.user.id,
+              role: session.user.role ?? null,
+              phone: session.user.phone ?? "",
+              name: session.user.name ?? "GiggiFi User",
+            }
+          : null
+      }
+      pendingPhone={null}
     />
   );
 }

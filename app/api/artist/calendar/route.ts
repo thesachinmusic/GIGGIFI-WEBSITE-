@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSessionFromCookies } from "@/lib/session";
-import { updateDb } from "@/lib/server-db";
+import { getServerAuthSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function PATCH(request: Request) {
-  const session = getSessionFromCookies();
-  if (!session || session.role !== "ARTIST") {
+  const session = await getServerAuthSession();
+  if (!session?.user?.id || session.user.role !== "ARTIST") {
     return NextResponse.json({ error: "Artist login required." }, { status: 401 });
   }
 
@@ -13,17 +13,26 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Date is required." }, { status: 400 });
   }
 
-  await updateDb((db) => {
-    const artist = db.artists.find((item) => item.userId === session.userId);
-    if (!artist) return;
-    const exists = artist.blackoutDates.some(
-      (item) => new Date(item).toDateString() === new Date(date).toDateString(),
-    );
-    artist.blackoutDates = exists
-      ? artist.blackoutDates.filter(
-          (item) => new Date(item).toDateString() !== new Date(date).toDateString(),
-        )
-      : [...artist.blackoutDates, date];
+  const artist = await prisma.artistProfile.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!artist) {
+    return NextResponse.json({ error: "Artist profile missing." }, { status: 404 });
+  }
+
+  const targetDate = new Date(date);
+  const exists = artist.blackoutDates.some(
+    (item) => item.toDateString() === targetDate.toDateString(),
+  );
+
+  await prisma.artistProfile.update({
+    where: { id: artist.id },
+    data: {
+      blackoutDates: exists
+        ? artist.blackoutDates.filter((item) => item.toDateString() !== targetDate.toDateString())
+        : [...artist.blackoutDates, targetDate],
+    },
   });
 
   return NextResponse.json({ success: true });

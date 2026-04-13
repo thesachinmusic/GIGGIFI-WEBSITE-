@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
-import { getSessionFromCookies } from "@/lib/session";
-import { readDb, updateDb } from "@/lib/server-db";
+import { getServerAuthSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { cartSchema } from "@/lib/validations";
 
 export async function GET() {
-  const session = getSessionFromCookies();
-  if (!session || session.role !== "BOOKER") {
+  const session = await getServerAuthSession();
+  if (!session?.user?.id || session.user.role !== "BOOKER") {
     return NextResponse.json({ cart: null });
   }
-  const db = await readDb();
-  const bookerProfile = db.bookers.find((item) => item.userId === session.userId);
-  const cart = bookerProfile
-    ? db.carts.find((item) => item.bookerId === bookerProfile.id) ?? null
-    : null;
+
+  const bookerProfile = await prisma.bookerProfile.findUnique({
+    where: { userId: session.user.id },
+    include: { cart: true },
+  });
+
+  const cart = bookerProfile?.cart ?? null;
+
   return NextResponse.json({ cart });
 }
 
 export async function POST(request: Request) {
-  const session = getSessionFromCookies();
-  if (!session || session.role !== "BOOKER") {
+  const session = await getServerAuthSession();
+  if (!session?.user?.id || session.user.role !== "BOOKER") {
     return NextResponse.json({ error: "Login as a booker first." }, { status: 401 });
   }
 
@@ -28,37 +31,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid cart update." }, { status: 400 });
   }
 
-  const db = await readDb();
-  const bookerProfile = db.bookers.find((item) => item.userId === session.userId);
+  const bookerProfile = await prisma.bookerProfile.findUnique({
+    where: { userId: session.user.id },
+  });
   if (!bookerProfile) {
     return NextResponse.json({ error: "Booker profile missing." }, { status: 404 });
   }
 
-  let responseCart = null;
-  await updateDb((next) => {
-    let cart = next.carts.find((item) => item.bookerId === bookerProfile.id);
-    if (!cart) {
-      cart = {
-        bookerId: bookerProfile.id,
-        artistIds: [],
-        updatedAt: new Date().toISOString(),
-      };
-      next.carts.push(cart);
-    }
-
-    if (parsed.data.action === "add" && !cart.artistIds.includes(parsed.data.artistId)) {
-      cart.artistIds.push(parsed.data.artistId);
-    }
-
-    if (parsed.data.action === "remove") {
-      cart.artistIds = cart.artistIds.filter((item) => item !== parsed.data.artistId);
-    }
-
-    cart.occasion = parsed.data.occasion ?? cart.occasion;
-    cart.city = parsed.data.city ?? cart.city;
-    cart.updatedAt = new Date().toISOString();
-    responseCart = cart;
+  const currentCart = await prisma.cart.findUnique({
+    where: { bookerId: bookerProfile.id },
   });
 
-  return NextResponse.json({ success: true, cart: responseCart });
+  const nextArtistIds = currentCart?.artistIds ?? [];
+
+  const artistIds =
+    parsed.data.action === "add"
+      ? Array.from(new Set([...nextArtistIds, parsed.data.artistId]))
+      : nextArtistIds.filter((item) => item !== parsed.data.artistId);
+
+  const cart = await prisma.cart.upsert({
+    where: { bookerId: bookerProfile.id },
+    update: {
+      artistIds,
+      occasion: parsed.data.occasion ?? currentCart?.occasion,
+      city: parsed.data.city ?? currentCart?.city,
+    },
+    create: {
+      bookerId: bookerProfile.id,
+      artistIds,
+      occasion: parsed.data.occasion,
+      city: parsed.data.city,
+    },
+  });
+
+  return NextResponse.json({ success: true, cart });
 }

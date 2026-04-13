@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { signIn, signOut } from "next-auth/react";
 import {
   startTransition,
   useDeferredValue,
@@ -64,7 +65,7 @@ import {
 
 type SessionPayload = {
   userId: string;
-  role: "ARTIST" | "BOOKER" | "ADMIN";
+  role: "ARTIST" | "BOOKER" | "ADMIN" | null;
   phone: string;
   name: string;
 };
@@ -239,7 +240,7 @@ export function GiggiFiApp({
   }
 
   async function handleLogout() {
-    await jsonRequest<{ success: boolean }>("/api/auth/logout", { method: "POST" });
+    await signOut({ redirect: false });
     setToast("Logged out.");
     await refreshFromServer("/");
   }
@@ -279,6 +280,17 @@ export function GiggiFiApp({
   const isArtistConsole = session?.role === "ARTIST";
   const showSubHeader =
     pathname !== "/" && pathname !== "/login" && pathname !== "/onboarding/choice";
+  const selectedArtist = slug[0] === "booker" && slug[1] === "artist" ? db.artists.find((item) => item.id === slug[2]) : undefined;
+  const selectedBooking = slug[1] ? db.bookings.find((item) => item.id === slug[1]) : undefined;
+  const selectedBookingArtist = selectedBooking
+    ? db.artists.find((item) => item.id === selectedBooking.artistId)
+    : undefined;
+  const selectedBookingBooker = selectedBooking
+    ? db.bookers.find((item) => item.id === selectedBooking.bookerId)
+    : undefined;
+  const artistScopedBookings = viewerArtist
+    ? db.bookings.filter((item) => item.artistId === viewerArtist.id)
+    : [];
 
   const heroArtistRows = cityOptions.flatMap((city) =>
     db.artists.filter((artist) => artist.city === city).slice(0, 1),
@@ -308,8 +320,8 @@ export function GiggiFiApp({
             <div className="text-sm font-semibold text-white">{pageName(slug)}</div>
             <div className="text-xs uppercase tracking-[0.18em] text-white/40">
               {session?.role === "ARTIST"
-                ? "Artist dashboard preview"
-                : "Premium booking interface preview"}
+                ? "Artist workspace"
+                : "Booking workspace"}
             </div>
           </div>
         </div>
@@ -337,7 +349,7 @@ export function GiggiFiApp({
 
           {routeKey === "login" ? (
             <LoginPage
-              initialPhone={pendingPhone ?? ""}
+              initialPhone={session?.phone ?? pendingPhone ?? ""}
               nextPath={nextQuery}
               onDone={async (path) => {
                 setToast("Welcome to GiggiFi.");
@@ -350,7 +362,7 @@ export function GiggiFiApp({
 
           {routeKey === "onboarding/artist" ? (
             <ArtistOnboardingPage
-              phone={pendingPhone}
+              phone={session?.phone ?? null}
               onDone={async (path) => {
                 setToast("Artist account created.");
                 await refreshFromServer(path);
@@ -360,7 +372,7 @@ export function GiggiFiApp({
 
           {routeKey === "onboarding/booker" ? (
             <BookerOnboardingPage
-              phone={pendingPhone}
+              phone={session?.phone ?? null}
               onDone={async (path) => {
                 setToast("Booker account created.");
                 await refreshFromServer(path);
@@ -382,132 +394,183 @@ export function GiggiFiApp({
           ) : null}
 
           {slug[0] === "booker" && slug[1] === "artist" && slug.length === 3 ? (
-            <ArtistProfilePage
-              artist={db.artists.find((item) => item.id === slug[2]) ?? db.artists[0]}
-              reviews={db.reviews}
-              onNavigate={go}
-            />
+            selectedArtist ? (
+              <ArtistProfilePage
+                artist={selectedArtist}
+                reviews={db.reviews}
+                onNavigate={go}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist not found"
+                body="This artist page is no longer available or the link is invalid."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {slug[0] === "booker" && slug[1] === "artist" && slug[3] === "enquiry" ? (
-            <EnquiryPage
-              artist={db.artists.find((item) => item.id === slug[2]) ?? db.artists[0]}
-              phone={session?.phone ?? pendingPhone ?? ""}
-              onDone={async (path) => {
-                setToast("Your enquiry has been sent. Most artists respond within 24 hours.");
-                await refreshFromServer(path);
-              }}
-            />
+            selectedArtist ? (
+              <EnquiryPage
+                artist={selectedArtist}
+                phone={session?.phone ?? pendingPhone ?? ""}
+                onDone={async (path) => {
+                  setToast("Your enquiry has been sent. Most artists respond within 24 hours.");
+                  await refreshFromServer(path);
+                }}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist not found"
+                body="We couldn’t load this enquiry flow because the artist record is missing."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {slug[0] === "booker" && slug[1] === "artist" && slug[3] === "quick-book" ? (
-            <QuickBookPage
-              artist={db.artists.find((item) => item.id === slug[2]) ?? db.artists[0]}
-              phone={session?.phone ?? ""}
-              onDone={async (path) => {
-                setToast("Booking summary prepared.");
-                await refreshFromServer(path);
-              }}
-            />
+            selectedArtist ? (
+              <QuickBookPage
+                artist={selectedArtist}
+                phone={session?.phone ?? ""}
+                onDone={async (path) => {
+                  setToast("Booking summary prepared.");
+                  await refreshFromServer(path);
+                }}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist not found"
+                body="This quick booking link is invalid because the artist record is missing."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {slug[0] === "checkout" && slug[1] ? (
-            <CheckoutPage
-              booking={db.bookings.find((item) => item.id === slug[1]) ?? db.bookings[0]}
-              artist={db.artists.find(
-                (item) =>
-                  item.id ===
-                  (db.bookings.find((booking) => booking.id === slug[1]) ?? db.bookings[0])
-                    ?.artistId,
-              )}
-              onDone={async (path) => {
-                setToast("Payment successful. Booking confirmed.");
-                await refreshFromServer(path);
-              }}
-            />
+            selectedBooking ? (
+              <CheckoutPage
+                booking={selectedBooking}
+                artist={selectedBookingArtist}
+                onDone={async (path, message) => {
+                  setToast(message);
+                  await refreshFromServer(path);
+                }}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Booking not found"
+                body="We couldn’t load checkout because this booking ID is invalid."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {slug[0] === "booking" && slug[1] ? (
-            <BookingDetailPage
-              booking={db.bookings.find((item) => item.id === slug[1]) ?? db.bookings[0]}
-              artist={db.artists.find(
-                (item) =>
-                  item.id ===
-                  (db.bookings.find((booking) => booking.id === slug[1]) ?? db.bookings[0])
-                    ?.artistId,
-              )}
-              booker={db.bookers.find(
-                (item) =>
-                  item.id ===
-                  (db.bookings.find((booking) => booking.id === slug[1]) ?? db.bookings[0])
-                    ?.bookerId,
-              )}
-              onUpdate={async (payload) => {
-                try {
-                  await jsonRequest(`/api/bookings/${slug[1]}`, {
-                    method: "PATCH",
-                    body: JSON.stringify(payload),
-                  });
-                  setToast("Booking updated.");
-                  await refreshFromServer();
-                } catch (error) {
-                  setToast(error instanceof Error ? error.message : "Could not update booking.");
-                }
-              }}
-              session={session}
-            />
+            selectedBooking ? (
+              <BookingDetailPage
+                booking={selectedBooking}
+                artist={selectedBookingArtist}
+                booker={selectedBookingBooker}
+                onUpdate={async (payload) => {
+                  try {
+                    await jsonRequest(`/api/bookings/${slug[1]}`, {
+                      method: "PATCH",
+                      body: JSON.stringify(payload),
+                    });
+                    setToast("Booking updated.");
+                    await refreshFromServer();
+                  } catch (error) {
+                    setToast(error instanceof Error ? error.message : "Could not update booking.");
+                  }
+                }}
+                session={session}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Booking not found"
+                body="This booking detail page is unavailable because the booking ID does not exist."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {routeKey === "artist/dashboard" ? (
-            <ArtistDashboardPage artist={viewerArtist ?? db.artists[0]} bookings={db.bookings} />
+            viewerArtist ? (
+              <ArtistDashboardPage artist={viewerArtist} bookings={db.bookings} />
+            ) : (
+              <NotFoundPanel
+                title="Artist profile missing"
+                body="Your artist dashboard can’t load until your artist profile is completed."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {routeKey === "artist/enquiries" ? (
-            <ArtistEnquiriesPage
-              artist={viewerArtist ?? db.artists[0]}
-              bookings={db.bookings.filter(
-                (item) => item.artistId === (viewerArtist?.id ?? db.artists[0]?.id),
-              )}
-              onUpdate={async (id, payload) => {
-                try {
-                  await jsonRequest(`/api/bookings/${id}`, {
-                    method: "PATCH",
-                    body: JSON.stringify(payload),
-                  });
-                  setToast("Enquiry updated.");
-                  await refreshFromServer();
-                } catch (error) {
-                  setToast(error instanceof Error ? error.message : "Could not update enquiry.");
-                }
-              }}
-            />
+            viewerArtist ? (
+              <ArtistEnquiriesPage
+                artist={viewerArtist}
+                bookings={artistScopedBookings}
+                onUpdate={async (id, payload) => {
+                  try {
+                    await jsonRequest(`/api/bookings/${id}`, {
+                      method: "PATCH",
+                      body: JSON.stringify(payload),
+                    });
+                    setToast("Enquiry updated.");
+                    await refreshFromServer();
+                  } catch (error) {
+                    setToast(error instanceof Error ? error.message : "Could not update enquiry.");
+                  }
+                }}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist profile missing"
+                body="Your enquiries will appear here after the artist profile is available."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {routeKey === "artist/calendar" ? (
-            <ArtistCalendarPage
-              artist={viewerArtist ?? db.artists[0]}
-              bookings={db.bookings.filter(
-                (item) => item.artistId === (viewerArtist?.id ?? db.artists[0]?.id),
-              )}
-              onToggle={async (date) => {
-                await jsonRequest("/api/artist/calendar", {
-                  method: "PATCH",
-                  body: JSON.stringify({ date }),
-                });
-                setToast("Availability updated.");
-                await refreshFromServer();
-              }}
-            />
+            viewerArtist ? (
+              <ArtistCalendarPage
+                artist={viewerArtist}
+                bookings={artistScopedBookings}
+                onToggle={async (date) => {
+                  await jsonRequest("/api/artist/calendar", {
+                    method: "PATCH",
+                    body: JSON.stringify({ date }),
+                  });
+                  setToast("Availability updated.");
+                  await refreshFromServer();
+                }}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist profile missing"
+                body="The availability calendar becomes available after your artist profile is set up."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {routeKey === "artist/earnings" ? (
-            <ArtistEarningsPage
-              artist={viewerArtist ?? db.artists[0]}
-              bookings={db.bookings.filter(
-                (item) => item.artistId === (viewerArtist?.id ?? db.artists[0]?.id),
-              )}
-              payments={db.payments}
-            />
+            viewerArtist ? (
+              <ArtistEarningsPage
+                artist={viewerArtist}
+                bookings={artistScopedBookings}
+                payments={db.payments}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist profile missing"
+                body="Earnings data will appear once your artist profile and bookings are available."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {routeKey === "cart" ? (
@@ -543,14 +606,20 @@ export function GiggiFiApp({
           !["artist/dashboard", "artist/enquiries", "artist/calendar", "artist/earnings"].includes(
             routeKey,
           ) ? (
-            <ArtistOpsPage
-              routeKey={routeKey}
-              artist={viewerArtist ?? db.artists[0]}
-              bookings={db.bookings.filter(
-                (item) => item.artistId === (viewerArtist?.id ?? db.artists[0]?.id),
-              )}
-              reviews={db.reviews}
-            />
+            viewerArtist ? (
+              <ArtistOpsPage
+                routeKey={routeKey}
+                artist={viewerArtist}
+                bookings={artistScopedBookings}
+                reviews={db.reviews}
+              />
+            ) : (
+              <NotFoundPanel
+                title="Artist profile missing"
+                body="This artist console page needs a completed artist profile."
+                onNavigate={go}
+              />
+            )
           ) : null}
 
           {routeKey === "admin" || routeKey.startsWith("admin/") ? (
@@ -567,6 +636,18 @@ export function GiggiFiApp({
                   await refreshFromServer();
                 } catch (error) {
                   setToast(error instanceof Error ? error.message : "Admin action failed.");
+                }
+              }}
+              onReviewKyc={async (artistId, payload) => {
+                try {
+                  await jsonRequest(`/api/admin/kyc/${artistId}`, {
+                    method: "PATCH",
+                    body: JSON.stringify(payload),
+                  });
+                  setToast("KYC review updated.");
+                  await refreshFromServer();
+                } catch (error) {
+                  setToast(error instanceof Error ? error.message : "KYC review failed.");
                 }
               }}
             />
@@ -587,13 +668,13 @@ export function GiggiFiApp({
           </button>
           <div className="mb-2 text-lg font-black">Download GiggiFi App</div>
           <div className="mb-4 text-sm text-white/70">
-            Get faster booking on iOS and Android
+            Mobile apps are not live yet. We’ll announce them here once downloads are available.
           </div>
           <div className="flex gap-3">
-            <button className={`${gradientClass} h-12 rounded-2xl px-5 font-semibold text-black`}>
+            <button disabled className={`${gradientClass} h-12 rounded-2xl px-5 font-semibold text-black opacity-60`}>
               iOS App
             </button>
-            <button className="h-12 rounded-2xl border border-white/15 bg-white/5 px-5 text-white">
+            <button disabled className="h-12 rounded-2xl border border-white/15 bg-white/5 px-5 text-white opacity-60">
               Android App
             </button>
           </div>
@@ -698,7 +779,9 @@ function SiteHeader({
                       ? "/artist/dashboard"
                       : session.role === "BOOKER"
                         ? "/booker/dashboard"
-                        : "/admin",
+                        : session.role === "ADMIN"
+                          ? "/admin"
+                          : "/onboarding/choice",
                   )
                 }
                 className={`${gradientClass} flex h-12 items-center rounded-2xl px-6 font-semibold text-black`}
@@ -748,6 +831,31 @@ function SiteHeader({
         </div>
       ) : null}
     </header>
+  );
+}
+
+function NotFoundPanel({
+  title,
+  body,
+  onNavigate,
+}: {
+  title: string;
+  body: string;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <GlassCard className="mx-auto max-w-2xl space-y-4 text-center">
+      <div className="text-3xl font-black">{title}</div>
+      <div className="text-white/65">{body}</div>
+      <div className="flex justify-center">
+        <button
+          className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}
+          onClick={() => onNavigate("/")}
+        >
+          Back to home
+        </button>
+      </div>
+    </GlassCard>
   );
 }
 
@@ -1259,14 +1367,18 @@ function LoginPage({
     setLoading(true);
     setError("");
     try {
-      const response = await jsonRequest<{
-        success: boolean;
-        redirect: string;
-      }>("/api/auth/verify-otp", {
-        method: "POST",
-        body: JSON.stringify({ phone, otp: otp.join("") }),
+      const result = await signIn("phone-otp", {
+        phone,
+        otp: otp.join(""),
+        redirect: false,
+        callbackUrl: nextPath || "/onboarding/choice",
       });
-      await onDone(nextPath || response.redirect);
+
+      if (!result || result.error) {
+        throw new Error(result?.error === "CredentialsSignin" ? "Incorrect OTP." : result?.error ?? "Could not verify OTP.");
+      }
+
+      await onDone(nextPath || "/onboarding/choice");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not verify OTP.");
     } finally {
@@ -1353,7 +1465,11 @@ function LoginPage({
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        <button className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 text-white">
+        <button
+          disabled={loading}
+          className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 text-white disabled:opacity-60"
+          onClick={() => signIn("google", { callbackUrl: nextPath || "/onboarding/choice" })}
+        >
           Continue with Google
         </button>
 
@@ -1527,6 +1643,34 @@ function ArtistOnboardingPage({
     },
   });
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadDraft() {
+      try {
+        const response = await jsonRequest<{ draft: { step: number; data: Record<string, unknown> } | null }>("/api/onboarding/draft");
+        if (!active || !response.draft) return;
+        setStep(response.draft.step || 1);
+        setForm((current: Record<string, unknown>) => ({
+          ...current,
+          ...response.draft?.data,
+          agreements: {
+            ...(current.agreements as Record<string, boolean>),
+            ...((response.draft?.data?.agreements as Record<string, boolean> | undefined) ?? {}),
+          },
+        }));
+      } catch {
+        return;
+      }
+    }
+
+    void loadDraft();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function saveDraft(nextStep = step) {
     await jsonRequest("/api/onboarding/draft", {
       method: "POST",
@@ -1653,7 +1797,7 @@ function ArtistOnboardingPage({
             <Field label="Account holder name" value={form.bankAccountName} onChange={(value) => setForm({ ...form, bankAccountName: value })} />
             <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4 text-sm text-white/70">
               <div className="mb-2 flex items-center gap-2 text-[#ffb340]"><Lock size={16} /> Security notice</div>
-              Your documents are encrypted with AES-256 and accessed only by our verification team. Never shared with bookers.
+              Sensitive KYC details stay restricted to internal verification and operational review.
             </div>
           </div>
         ) : null}
@@ -1741,6 +1885,34 @@ function BookerOnboardingPage({
     howHeard: "",
     terms: { service: false, escrow: false },
   });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDraft() {
+      try {
+        const response = await jsonRequest<{ draft: { step: number; data: Record<string, unknown> } | null }>("/api/onboarding/draft");
+        if (!active || !response.draft) return;
+        setStep(response.draft.step || 1);
+        setForm((current: Record<string, unknown>) => ({
+          ...current,
+          ...response.draft?.data,
+          terms: {
+            ...(current.terms as Record<string, boolean>),
+            ...((response.draft?.data?.terms as Record<string, boolean> | undefined) ?? {}),
+          },
+        }));
+      } catch {
+        return;
+      }
+    }
+
+    void loadDraft();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function saveDraft(nextStep = step) {
     await jsonRequest("/api/onboarding/draft", {
@@ -2108,7 +2280,7 @@ function ArtistProfilePage({
         <div className="space-y-4 lg:sticky lg:top-36 lg:self-start">
           <GlassCard>
             <div className="text-xl font-bold">Book {artist.stageName}</div>
-            <p className="mt-2 text-sm text-white/60">Your money doesn&apos;t go to the artist until after your event. You&apos;re completely protected.</p>
+            <p className="mt-2 text-sm text-white/60">Quotes, bookings, and payments stay in one tracked flow so artists and bookers see the same booking state.</p>
             <div className="mt-4 space-y-3">
               <button className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}/enquiry`)}>
                 Send Enquiry
@@ -2167,6 +2339,31 @@ function EnquiryPage({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadDraft() {
+      try {
+        const response = await jsonRequest<{ draft: { data: Record<string, unknown> } | null }>(
+          `/api/bookings/draft?artistId=${artist.id}`,
+        );
+        if (!active || !response.draft?.data) return;
+        setForm((current: Record<string, unknown>) => ({
+          ...current,
+          ...response.draft?.data,
+        }));
+      } catch {
+        return;
+      }
+    }
+
+    void loadDraft();
+
+    return () => {
+      active = false;
+    };
+  }, [artist.id]);
+
   async function submit() {
     setLoading(true);
     setError("");
@@ -2180,6 +2377,18 @@ function EnquiryPage({
       setError(err instanceof Error ? err.message : "Could not send enquiry.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveDraft() {
+    try {
+      await jsonRequest("/api/bookings/draft", {
+        method: "POST",
+        body: JSON.stringify({ artistId: artist.id, data: form }),
+      });
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save draft.");
     }
   }
 
@@ -2230,7 +2439,7 @@ function EnquiryPage({
         <button disabled={loading} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={submit}>
           Send Enquiry
         </button>
-        <button className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white" onClick={() => window.localStorage.setItem(`draft-enquiry-${artist.id}`, JSON.stringify(form))}>
+        <button className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white" onClick={saveDraft}>
           Save as Draft
         </button>
       </div>
@@ -2354,7 +2563,7 @@ function QuickBookPage({
           <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
             <div className="mb-2 flex items-center gap-2 text-white">
               <Lock size={16} />
-              Your payment is held securely in escrow and released to the artist only after your event is successfully completed.
+              This booking is prepared for escrow-based payment once a real gateway callback is enabled.
             </div>
             Cancelling late means you may lose part of your payment. Check the full policy.
           </div>
@@ -2374,7 +2583,7 @@ function CheckoutPage({
 }: {
   booking: BookingRecord;
   artist?: ArtistRecord;
-  onDone: (path: string) => Promise<void>;
+  onDone: (path: string, message: string) => Promise<void>;
 }) {
   const [method, setMethod] = useState<"UPI" | "CARDS" | "NETBANKING" | "WALLET">("UPI");
   const [loading, setLoading] = useState(false);
@@ -2382,11 +2591,14 @@ function CheckoutPage({
   async function pay() {
     setLoading(true);
     try {
-      const response = await jsonRequest<{ redirect: string }>(`/api/bookings/${booking.id}/payment`, {
+      const response = await jsonRequest<{ redirect: string; message?: string }>(`/api/bookings/${booking.id}/payment`, {
         method: "POST",
         body: JSON.stringify({ paymentMethod: method }),
       });
-      await onDone(response.redirect);
+      await onDone(
+        response.redirect,
+        response.message ?? "Payment request recorded. This booking will stay awaiting payment until gateway confirmation is live.",
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed.");
     } finally {
@@ -2411,11 +2623,14 @@ function CheckoutPage({
           ))}
         </div>
         <div className="rounded-[1.5rem] bg-black/20 p-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="UPI / Card holder" value="" onChange={() => undefined} />
-            <Field label="Card / UPI details" value="" onChange={() => undefined} />
-            <Field label="Expiry / bank" value="" onChange={() => undefined} />
-            <Field label="CVV / wallet" value="" onChange={() => undefined} />
+          <div className="text-lg font-bold">Gateway readiness</div>
+          <div className="mt-3 text-sm text-white/70">
+            This checkout now creates a pending payment record only. No fake charge is attempted, and the booking stays in
+            <span className="mx-1 font-semibold text-white">Awaiting Payment</span>
+            until a real gateway callback confirms payment.
+          </div>
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/60">
+            Selected method: {method}. Provider integration hooks are prepared, but live capture is intentionally disabled until the gateway is configured.
           </div>
         </div>
         <div className="rounded-[1.5rem] bg-black/20 p-5">
@@ -2434,16 +2649,14 @@ function CheckoutPage({
         <div className="flex flex-wrap gap-3 text-sm text-white/60">
           <span>SSL Secured</span>
           <span>·</span>
-          <span>Escrow Protected</span>
-          <span>·</span>
-          <span>RBI Compliant</span>
+          <span>Escrow-ready architecture</span>
           <span>·</span>
           <span>Dispute Resolution Available</span>
         </div>
         {error ? <div className="text-sm text-red-300">{error}</div> : null}
         <button className={`${gradientClass} flex h-14 w-full items-center justify-center gap-2 rounded-2xl font-semibold text-black`} onClick={pay} disabled={loading}>
           <Lock size={18} />
-          {loading ? "Processing..." : `Pay ${formatINR(booking.totalAmount ?? 0)} Securely`}
+          {loading ? "Creating payment..." : `Create Payment Record for ${formatINR(booking.totalAmount ?? 0)}`}
         </button>
       </GlassCard>
       <GlassCard className="space-y-5 lg:sticky lg:top-36 lg:self-start">
@@ -2459,7 +2672,7 @@ function CheckoutPage({
         <FeeRow label="GST" value={booking.gstAmount ?? 0} />
         <FeeRow label="Total payable" value={booking.totalAmount ?? 0} strong />
         <div className="rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-          Escrow protection badge: your payment is protected until the event is completed.
+          Booking status will move forward only after a real payment callback is wired in.
         </div>
       </GlassCard>
     </div>
@@ -2597,7 +2810,7 @@ function ArtistDashboardPage({
           <div className="text-sm text-[#ffb340]">{artist.kycStatus === "APPROVED" ? "KYC approved" : artist.kycStatus === "REJECTED" ? "KYC rejected" : "KYC pending"}</div>
           <div className="mt-2 text-3xl font-black">Welcome back, {artist.stageName}</div>
         </div>
-        <div className="text-sm text-white/60">Profile completion 92%</div>
+        <div className="text-sm text-white/60">Profile and KYC data shown from your saved artist record</div>
       </GlassCard>
       <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-6">
@@ -3018,10 +3231,15 @@ function AdminPage({
   routeKey,
   db,
   onUpdate,
+  onReviewKyc,
 }: {
   routeKey: string;
   db: MockDatabase;
   onUpdate: (id: string, payload: Record<string, unknown>) => Promise<void>;
+  onReviewKyc: (
+    artistId: string,
+    payload: { status: "APPROVED" | "REJECTED"; reason?: string },
+  ) => Promise<void>;
 }) {
   const pendingArtists = db.artists.filter((artist) => artist.kycStatus === "PENDING");
   if (routeKey === "admin") {
@@ -3063,10 +3281,10 @@ function AdminPage({
                 <div className="text-sm text-white/60">{artist.city} · {artist.category}</div>
               </div>
               <div className="flex gap-3">
-                <button className={`${gradientClass} rounded-2xl px-4 py-2 font-semibold text-black`} onClick={() => onUpdate(db.bookings[0]?.id || "booking-gf-001", { action: "release_payout" })}>
+                <button className={`${gradientClass} rounded-2xl px-4 py-2 font-semibold text-black`} onClick={() => onReviewKyc(artist.id, { status: "APPROVED" })}>
                   Approve KYC
                 </button>
-                <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-white">
+                <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-white" onClick={() => onReviewKyc(artist.id, { status: "REJECTED", reason: "Please review uploaded KYC details and resubmit." })}>
                   Reject KYC
                 </button>
               </div>

@@ -1,0 +1,25 @@
+import { DefaultSession } from "next-auth";
+import { Role } from "@prisma/client";
+
+declare module "next-auth" {
+  interface Session {
+    user: DefaultSession["user"] & {
+      id: string;
+      role: Role | null;
+      phone: string | null;
+      onboardingState?: string | null;
+      hasArtistProfile: boolean;
+      hasBookerProfile: boolean;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: Role | null;
+    phone?: string | null;
+    onboardingState?: string | null;
+    hasArtistProfile?: boolean;
+    hasBookerProfile?: boolean;
+  }
+}
