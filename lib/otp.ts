@@ -37,6 +37,18 @@ async function sendViaTwilio(phone: string, otp: string) {
     );
   }
 
+  if (!/^AC[a-zA-Z0-9]{32}$/.test(accountSid)) {
+    throw new Error(
+      "OTP login is not configured correctly yet. TWILIO_ACCOUNT_SID must start with AC.",
+    );
+  }
+
+  if (!/^VA[a-zA-Z0-9]{32}$/.test(verifyServiceSid)) {
+    throw new Error(
+      "OTP login is not configured correctly yet. TWILIO_VERIFY_SERVICE_SID must start with VA.",
+    );
+  }
+
   const client = Twilio(accountSid, authToken);
 
   await client.verify.v2.services(verifyServiceSid).verifications.create({
