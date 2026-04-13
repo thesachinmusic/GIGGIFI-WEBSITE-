@@ -1406,26 +1406,22 @@ function LoginPage({
     setLoading(true);
     setError("");
     try {
-      const verification = await jsonRequest<{
-        success: boolean;
-        redirect: string;
-      }>("/api/auth/verify-otp", {
-        method: "POST",
-        body: JSON.stringify({ phone, otp: otp.join("") }),
-      });
-
       const result = await signIn("phone-otp", {
         phone,
         otp: otp.join(""),
         redirect: false,
-        callbackUrl: verification.redirect || nextPath || "/onboarding/choice",
+        callbackUrl: nextPath || "/onboarding/choice",
       });
 
       if (!result || result.error) {
-        throw new Error(result?.error === "CredentialsSignin" ? "Incorrect OTP." : result?.error ?? "Could not verify OTP.");
+        throw new Error(
+          result?.error === "CredentialsSignin"
+            ? "Incorrect or expired OTP."
+            : result?.error ?? "Could not verify OTP.",
+        );
       }
 
-      await onDone(verification.redirect || nextPath || "/onboarding/choice");
+      await onDone(nextPath || "/onboarding/choice");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not verify OTP.");
     } finally {

@@ -20,13 +20,15 @@ Useful links:
   `https://vercel.com/thesachinmusics-projects/giggifi-website`
 - Last successful deployment:
   `https://giggifi-website-c5zu3uei7-thesachinmusics-projects.vercel.app`
-- Main Vercel domain to use for now:
+- Canonical production auth domain:
+  `https://giggifi-website.vercel.app`
+- Secondary Vercel domain you can keep during setup/testing:
   `https://giggifi-website-thesachinmusics-projects.vercel.app`
 
 Use this URL for `NEXTAUTH_URL` in production:
 
 ```env
-NEXTAUTH_URL="https://giggifi-website-thesachinmusics-projects.vercel.app"
+NEXTAUTH_URL="https://giggifi-website.vercel.app"
 ```
 
 ## 2. Create the real database
@@ -127,6 +129,7 @@ Authorized JavaScript origins:
 
 ```text
 http://localhost:3000
+https://giggifi-website.vercel.app
 https://giggifi-website-thesachinmusics-projects.vercel.app
 ```
 
@@ -134,6 +137,7 @@ Authorized redirect URIs:
 
 ```text
 http://localhost:3000/api/auth/callback/google
+https://giggifi-website.vercel.app/api/auth/callback/google
 https://giggifi-website-thesachinmusics-projects.vercel.app/api/auth/callback/google
 ```
 
@@ -160,6 +164,10 @@ Then use them for:
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_VERIFY_SERVICE_SID`
+
+Important:
+- Twilio trial accounts can only send OTP SMS to phone numbers you have verified inside Twilio.
+- For public end-user OTP login, upgrade the Twilio account and keep using `Verify` with Twilio-generated codes.
 
 ## 8. Check env values locally
 
