@@ -1,0 +1,1868 @@
+{
+  "users": [
+    {
+      "id": "user-artist-1",
+      "phone": "+91980000001",
+      "email": "sach@giggifi.in",
+      "role": "ARTIST",
+      "status": "ACTIVE",
+      "name": "SACH",
+      "emailVerified": true,
+      "createdAt": "2026-01-11T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-2",
+      "phone": "+91980000002",
+      "email": "thevelvetnotes@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "The Velvet Notes",
+      "emailVerified": true,
+      "createdAt": "2026-01-12T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-3",
+      "phone": "+91980000003",
+      "email": "riyaflame@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Riya Flame",
+      "emailVerified": true,
+      "createdAt": "2026-01-13T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-4",
+      "phone": "+91980000004",
+      "email": "rahulroast@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Rahul Roast",
+      "emailVerified": true,
+      "createdAt": "2026-01-14T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-5",
+      "phone": "+91980000005",
+      "email": "noorcollective@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Noor Collective",
+      "emailVerified": true,
+      "createdAt": "2026-01-15T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-6",
+      "phone": "+91980000006",
+      "email": "skylinecircus@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Skyline Circus",
+      "emailVerified": true,
+      "createdAt": "2026-01-16T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-7",
+      "phone": "+91980000007",
+      "email": "sufisoulz@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Sufi Soulz",
+      "emailVerified": true,
+      "createdAt": "2026-01-17T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-8",
+      "phone": "+91980000008",
+      "email": "rjarjun@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "RJ Arjun",
+      "emailVerified": true,
+      "createdAt": "2026-01-18T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-9",
+      "phone": "+91980000009",
+      "email": "nrityaarts@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Nritya Arts",
+      "emailVerified": true,
+      "createdAt": "2026-01-19T13:39:19.325Z"
+    },
+    {
+      "id": "user-artist-10",
+      "phone": "+919800000010",
+      "email": "maestrorajan@giggifi.in",
+      "role": "ARTIST",
+      "status": "PENDING_VERIFICATION",
+      "name": "Maestro Rajan",
+      "emailVerified": true,
+      "createdAt": "2026-01-20T13:39:19.325Z"
+    },
+    {
+      "id": "user-booker-1",
+      "phone": "+919876543210",
+      "email": "ritika@giggifi.in",
+      "role": "BOOKER",
+      "status": "ACTIVE",
+      "name": "Ritika Sharma",
+      "emailVerified": true,
+      "createdAt": "2026-02-25T13:39:19.325Z"
+    },
+    {
+      "id": "user-admin-1",
+      "phone": "+919000000000",
+      "email": "admin@giggifi.in",
+      "role": "ADMIN",
+      "status": "ACTIVE",
+      "name": "GiggiFi Admin",
+      "emailVerified": true,
+      "createdAt": "2025-12-12T13:39:19.325Z"
+    }
+  ],
+  "artists": [
+    {
+      "id": "artist-sach",
+      "legalName": "Sachin Chaudhary",
+      "stageName": "SACH",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "serviceableStates": [
+        "Maharashtra",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Singer-Guitarist",
+      "subcategory": [
+        "Singer-Guitarist"
+      ],
+      "genres": [
+        "Bollywood",
+        "Sufi",
+        "Pop"
+      ],
+      "languages": [
+        "Hindi",
+        "English"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "SACH is a premium singer-guitarist act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/sach-1/1200/900",
+        "https://picsum.photos/seed/sach-2/1200/900",
+        "https://picsum.photos/seed/sach-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "/media/sach/profile.jpg",
+      "coverPhoto": "https://picsum.photos/seed/sach-cover/1600/900",
+      "basePriceSolo": 20000,
+      "basePriceBand": 35000,
+      "basePriceDJ": 30000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Sachin Chaudhary",
+      "stripeAccountId": "acct_artist-sach",
+      "razorpayAccountId": "rzp_artist-sach",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.9,
+      "totalBookings": 49,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Featured in your area",
+      "tagline": "Sufi • Bollywood • Live Weddings",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 20000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 32000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 42000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 58000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "/media/sach/profile.jpg"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-1"
+    },
+    {
+      "id": "artist-velvet",
+      "legalName": "Velvet Notes LLP",
+      "stageName": "The Velvet Notes",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "serviceableStates": [
+        "Maharashtra",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Band",
+      "subcategory": [
+        "Band"
+      ],
+      "genres": [
+        "Pop",
+        "Rock",
+        "Bollywood"
+      ],
+      "languages": [
+        "Hindi",
+        "English"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "The Velvet Notes is a premium band act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/velvet-1/1200/900",
+        "https://picsum.photos/seed/velvet-2/1200/900",
+        "https://picsum.photos/seed/velvet-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/velvet-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/velvet-cover/1600/900",
+      "basePriceSolo": 45000,
+      "basePriceBand": 60000,
+      "basePriceDJ": 55000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Velvet Notes LLP",
+      "stripeAccountId": "acct_artist-velvet",
+      "razorpayAccountId": "rzp_artist-velvet",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.8,
+      "totalBookings": 48,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Wedding favourite",
+      "tagline": "Live Band • Reception",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 45000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 57000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 67000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 83000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/velvet-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-2"
+    },
+    {
+      "id": "artist-riya",
+      "legalName": "Riya Sharma",
+      "stageName": "Riya Flame",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "serviceableStates": [
+        "Karnataka",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Dancer",
+      "subcategory": [
+        "Dancer"
+      ],
+      "genres": [
+        "Pop"
+      ],
+      "languages": [
+        "Hindi",
+        "English",
+        "Kannada"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Riya Flame is a premium dancer act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/riya-1/1200/900",
+        "https://picsum.photos/seed/riya-2/1200/900",
+        "https://picsum.photos/seed/riya-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/riya-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/riya-cover/1600/900",
+      "basePriceSolo": 22000,
+      "basePriceBand": 37000,
+      "basePriceDJ": 32000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Riya Sharma",
+      "stripeAccountId": "acct_artist-riya",
+      "razorpayAccountId": "rzp_artist-riya",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.9,
+      "totalBookings": 49,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "High energy performer",
+      "tagline": "Commercial • Event Choreo",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 22000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 34000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 44000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 60000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/riya-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-3"
+    },
+    {
+      "id": "artist-rahul",
+      "legalName": "Rahul Jain",
+      "stageName": "Rahul Roast",
+      "city": "Delhi",
+      "state": "Delhi",
+      "serviceableStates": [
+        "Delhi",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Stand Up Comedy",
+      "subcategory": [
+        "Stand Up Comedy"
+      ],
+      "genres": [
+        "Comedy"
+      ],
+      "languages": [
+        "Hindi",
+        "English"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Rahul Roast is a premium stand up comedy act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/rahul-1/1200/900",
+        "https://picsum.photos/seed/rahul-2/1200/900",
+        "https://picsum.photos/seed/rahul-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/rahul-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/rahul-cover/1600/900",
+      "basePriceSolo": 28000,
+      "basePriceBand": 43000,
+      "basePriceDJ": 38000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Rahul Jain",
+      "stripeAccountId": "acct_artist-rahul",
+      "razorpayAccountId": "rzp_artist-rahul",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.7,
+      "totalBookings": 47,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Corporate crowd hit",
+      "tagline": "Clean Comedy • Corporate",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 28000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 40000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 50000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 66000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/rahul-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-4"
+    },
+    {
+      "id": "artist-noor",
+      "legalName": "Noor Collective Arts",
+      "stageName": "Noor Collective",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "serviceableStates": [
+        "Maharashtra",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Musicians",
+      "subcategory": [
+        "Musicians"
+      ],
+      "genres": [
+        "Jazz",
+        "Classical",
+        "Sufi"
+      ],
+      "languages": [
+        "Hindi",
+        "English"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Noor Collective is a premium musicians act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/noor-1/1200/900",
+        "https://picsum.photos/seed/noor-2/1200/900",
+        "https://picsum.photos/seed/noor-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/noor-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/noor-cover/1600/900",
+      "basePriceSolo": 30000,
+      "basePriceBand": 45000,
+      "basePriceDJ": 40000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Noor Collective Arts",
+      "stripeAccountId": "acct_artist-noor",
+      "razorpayAccountId": "rzp_artist-noor",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.8,
+      "totalBookings": 48,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Luxury ambience act",
+      "tagline": "Instrumental • Lounge",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 30000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 42000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 52000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 68000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/noor-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-5"
+    },
+    {
+      "id": "artist-skyline",
+      "legalName": "Skyline Circus Studio",
+      "stageName": "Skyline Circus",
+      "city": "Delhi",
+      "state": "Delhi",
+      "serviceableStates": [
+        "Delhi",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Circus",
+      "subcategory": [
+        "Circus"
+      ],
+      "genres": [
+        "Other"
+      ],
+      "languages": [
+        "English",
+        "Hindi"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Skyline Circus is a premium circus act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/skyline-1/1200/900",
+        "https://picsum.photos/seed/skyline-2/1200/900",
+        "https://picsum.photos/seed/skyline-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/skyline-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/skyline-cover/1600/900",
+      "basePriceSolo": 55000,
+      "basePriceBand": 70000,
+      "basePriceDJ": 65000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Skyline Circus Studio",
+      "stripeAccountId": "acct_artist-skyline",
+      "razorpayAccountId": "rzp_artist-skyline",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.9,
+      "totalBookings": 49,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Visual spectacle",
+      "tagline": "Aerial • LED",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 55000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 67000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 77000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 93000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/skyline-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-6"
+    },
+    {
+      "id": "artist-sufi",
+      "legalName": "Sufi Soulz Private",
+      "stageName": "Sufi Soulz",
+      "city": "Jaipur",
+      "state": "Rajasthan",
+      "serviceableStates": [
+        "Rajasthan",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Singers",
+      "subcategory": [
+        "Singers"
+      ],
+      "genres": [
+        "Sufi",
+        "Ghazal"
+      ],
+      "languages": [
+        "Hindi",
+        "Punjabi"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Sufi Soulz is a premium singers act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/soulz-1/1200/900",
+        "https://picsum.photos/seed/soulz-2/1200/900",
+        "https://picsum.photos/seed/soulz-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/soulz-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/soulz-cover/1600/900",
+      "basePriceSolo": 22000,
+      "basePriceBand": 37000,
+      "basePriceDJ": 32000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Sufi Soulz Private",
+      "stripeAccountId": "acct_artist-sufi",
+      "razorpayAccountId": "rzp_artist-sufi",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.9,
+      "totalBookings": 49,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Destination wedding pick",
+      "tagline": "Sufi • Ghazal",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 22000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 34000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 44000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 60000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/soulz-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-7"
+    },
+    {
+      "id": "artist-arjun",
+      "legalName": "Arjun Varma",
+      "stageName": "RJ Arjun",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "serviceableStates": [
+        "Telangana",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Misc. Entertainers",
+      "subcategory": [
+        "Misc. Entertainers"
+      ],
+      "genres": [
+        "Other"
+      ],
+      "languages": [
+        "Hindi",
+        "English",
+        "Telugu"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "RJ Arjun is a premium misc. entertainers act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/arjun-1/1200/900",
+        "https://picsum.photos/seed/arjun-2/1200/900",
+        "https://picsum.photos/seed/arjun-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/arjun-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/arjun-cover/1600/900",
+      "basePriceSolo": 12000,
+      "basePriceBand": 27000,
+      "basePriceDJ": 22000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Arjun Varma",
+      "stripeAccountId": "acct_artist-arjun",
+      "razorpayAccountId": "rzp_artist-arjun",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.8,
+      "totalBookings": 48,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Reliable host",
+      "tagline": "Emcee • Host",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 12000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 24000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 34000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 50000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/arjun-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-8"
+    },
+    {
+      "id": "artist-nritya",
+      "legalName": "Nritya Arts Company",
+      "stageName": "Nritya Arts",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "serviceableStates": [
+        "Maharashtra",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Dancers",
+      "subcategory": [
+        "Dancers"
+      ],
+      "genres": [
+        "Bollywood"
+      ],
+      "languages": [
+        "Hindi",
+        "Marathi"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Nritya Arts is a premium dancers act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/nritya-1/1200/900",
+        "https://picsum.photos/seed/nritya-2/1200/900",
+        "https://picsum.photos/seed/nritya-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/nritya-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/nritya-cover/1600/900",
+      "basePriceSolo": 35000,
+      "basePriceBand": 50000,
+      "basePriceDJ": 45000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Nritya Arts Company",
+      "stripeAccountId": "acct_artist-nritya",
+      "razorpayAccountId": "rzp_artist-nritya",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.7,
+      "totalBookings": 47,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Sangeet specialist",
+      "tagline": "Bollywood Dance Troupe",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 35000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 47000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 57000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 73000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/nritya-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-9"
+    },
+    {
+      "id": "artist-rajan",
+      "legalName": "Rajan Mukherjee",
+      "stageName": "Maestro Rajan",
+      "city": "Kolkata",
+      "state": "West Bengal",
+      "serviceableStates": [
+        "West Bengal",
+        "Maharashtra",
+        "Delhi",
+        "Karnataka",
+        "Goa"
+      ],
+      "category": "Singers",
+      "subcategory": [
+        "Singers"
+      ],
+      "genres": [
+        "Classical",
+        "Devotional"
+      ],
+      "languages": [
+        "Hindi",
+        "Bengali"
+      ],
+      "performanceTypes": [
+        "Solo",
+        "With Band",
+        "Acoustic"
+      ],
+      "yearsExperience": 6,
+      "bio": "Maestro Rajan is a premium singers act built for luxury celebrations, corporate stages, and high-touch hospitality events across India.",
+      "notableClients": "Taj Hotels, Marriott, Google, ITC, private destination weddings",
+      "portfolioPhotos": [
+        "https://picsum.photos/seed/rajan-1/1200/900",
+        "https://picsum.photos/seed/rajan-2/1200/900",
+        "https://picsum.photos/seed/rajan-3/1200/900"
+      ],
+      "portfolioVideos": [
+        "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
+        "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+      ],
+      "audioSamples": [
+        "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+      ],
+      "profilePhoto": "https://picsum.photos/seed/rajan-avatar/800/800",
+      "coverPhoto": "https://picsum.photos/seed/rajan-cover/1600/900",
+      "basePriceSolo": 30000,
+      "basePriceBand": 45000,
+      "basePriceDJ": 40000,
+      "travelIncluded": "NEGOTIABLE",
+      "accommodationNeeded": true,
+      "minAdvanceBooking": 7,
+      "blackoutDates": [
+        "2026-04-20T13:39:19.325Z",
+        "2026-04-30T13:39:19.325Z"
+      ],
+      "availableWeekdays": true,
+      "availableWeekends": true,
+      "isAvailable": true,
+      "aadhaarNumber": "XXXX XXXX 6721",
+      "panNumber": "ABCDE1234F",
+      "gstNumber": "27ABCDE1234F1Z5",
+      "bankAccountNumber": "XXXXXXXX4821",
+      "bankIFSC": "HDFC0004821",
+      "bankAccountName": "Rajan Mukherjee",
+      "stripeAccountId": "acct_artist-rajan",
+      "razorpayAccountId": "rzp_artist-rajan",
+      "kycStatus": "APPROVED",
+      "onboardingStep": 7,
+      "rating": 4.9,
+      "totalBookings": 49,
+      "termsAcceptedAt": "2026-02-10T13:39:19.325Z",
+      "featuredTag": "Heritage premium act",
+      "tagline": "Classical Vocalist",
+      "packages": [
+        {
+          "title": "Solo",
+          "price": 30000,
+          "description": "Live solo performance for weddings, cocktails, intimate gatherings"
+        },
+        {
+          "title": "Duo / Two-Piece Band",
+          "price": 42000,
+          "description": "Layered instrumentation for premium mid-size gatherings"
+        },
+        {
+          "title": "Four-Piece Band",
+          "price": 52000,
+          "description": "High-impact stage format for receptions and clubs"
+        },
+        {
+          "title": "Six to Seven Piece Band",
+          "price": 68000,
+          "description": "Full-scale production for marquee celebrations"
+        }
+      ],
+      "socials": {
+        "instagramUrl": "https://instagram.com/giggifi",
+        "youtubeUrl": "https://youtube.com/@giggifi",
+        "spotifyUrl": "https://spotify.com",
+        "facebookUrl": "https://facebook.com/giggifi",
+        "websiteUrl": "https://giggifi.example.com"
+      },
+      "mediaVault": [
+        {
+          "label": "Press kit PDF",
+          "description": "Latest introduction deck",
+          "status": "Ready",
+          "href": "/media/sach/press-kit.pdf"
+        },
+        {
+          "label": "Reel",
+          "description": "Vertical highlight edit",
+          "status": "Ready",
+          "href": "/media/sach/showreel.mp4"
+        },
+        {
+          "label": "Performance video",
+          "description": "Landscape live clip",
+          "status": "Ready",
+          "href": "/media/sach/live-performance.mov"
+        },
+        {
+          "label": "Profile photo",
+          "description": "Primary artist photo",
+          "status": "Ready",
+          "href": "https://picsum.photos/seed/rajan-avatar/800/800"
+        },
+        {
+          "label": "Package deck",
+          "description": "Pricing one-pager",
+          "status": "Pending refresh"
+        },
+        {
+          "label": "KYC bundle",
+          "description": "Verification docs set",
+          "status": "Approved"
+        }
+      ],
+      "userId": "user-artist-10"
+    }
+  ],
+  "bookers": [
+    {
+      "id": "booker-profile-1",
+      "userId": "user-booker-1",
+      "fullName": "Ritika Sharma",
+      "email": "ritika@giggifi.in",
+      "companyName": "Ritika Events",
+      "bookerType": "PLANNER",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "kycVerified": true,
+      "howHeard": "Instagram",
+      "termsAcceptedAt": "2026-02-25T13:39:19.326Z",
+      "createdAt": "2026-02-25T13:39:19.326Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "booking-gf-001",
+      "bookerId": "booker-profile-1",
+      "artistId": "artist-sach",
+      "bookingType": "QUICK_BOOKING",
+      "status": "PAYMENT_HELD",
+      "eventName": "Sangeet by the Sea",
+      "eventType": "Wedding",
+      "eventDate": "2026-04-23T13:39:19.326Z",
+      "isFlexibleDate": false,
+      "alternateDates": [],
+      "eventStartTime": "19:00",
+      "eventEndTime": "21:00",
+      "venueType": "Indoor",
+      "venueName": "Sea Crest Ballroom",
+      "venueAddress": "Bandra West, Mumbai",
+      "eventCity": "Mumbai",
+      "eventState": "Maharashtra",
+      "audienceSize": 220,
+      "duration": 120,
+      "performanceType": "Solo",
+      "languagePref": [
+        "Hindi",
+        "English"
+      ],
+      "specialRequests": "Need a Sufi opener followed by Bollywood singalong set.",
+      "soundAvailable": true,
+      "lightAvailable": true,
+      "travelArranged": true,
+      "accomProvided": false,
+      "budgetMin": 18000,
+      "budgetMax": 30000,
+      "contactPerson": "Ritika Sharma",
+      "contactPhone": "+919876543210",
+      "responseUrgency": "Within 24 hrs",
+      "quotedPrice": 20000,
+      "totalAmount": 22360,
+      "platformFee": 2000,
+      "gstAmount": 360,
+      "artistPayout": 20000,
+      "escrowStatus": "HELD",
+      "paymentId": "payment-gf-001",
+      "createdAt": "2026-04-08T13:39:19.326Z",
+      "updatedAt": "2026-04-09T13:39:19.326Z",
+      "quickBookPackage": "Solo",
+      "chat": [
+        {
+          "id": "chat-1",
+          "from": "SYSTEM",
+          "body": "Your booking with SACH is confirmed and payment is held in escrow.",
+          "createdAt": "2026-04-09T13:39:19.326Z"
+        },
+        {
+          "id": "chat-2",
+          "from": "ARTIST",
+          "body": "Looking forward to performing. Please share the final running order 48 hours before the event.",
+          "createdAt": "2026-04-10T13:39:19.326Z"
+        }
+      ]
+    },
+    {
+      "id": "booking-gf-002",
+      "bookerId": "booker-profile-1",
+      "artistId": "artist-rahul",
+      "bookingType": "ENQUIRY",
+      "status": "QUOTE_RECEIVED",
+      "eventName": "Annual Leadership Night",
+      "eventType": "Corporate Event",
+      "eventDate": "2026-05-01T13:39:19.326Z",
+      "isFlexibleDate": true,
+      "alternateDates": [
+        "2026-05-02T13:39:19.326Z"
+      ],
+      "eventStartTime": "20:30",
+      "eventEndTime": "21:30",
+      "venueType": "Indoor",
+      "venueName": "The Westin Gurugram",
+      "venueAddress": "Sector 29, Gurugram",
+      "eventCity": "Delhi",
+      "eventState": "Delhi",
+      "audienceSize": 400,
+      "duration": 60,
+      "performanceType": "Solo",
+      "languagePref": [
+        "English",
+        "Hindi"
+      ],
+      "specialRequests": "Clean corporate comedy only. No politics.",
+      "soundAvailable": true,
+      "lightAvailable": true,
+      "travelArranged": true,
+      "accomProvided": true,
+      "budgetMin": 20000,
+      "budgetMax": 40000,
+      "contactPerson": "Ritika Sharma",
+      "contactPhone": "+919876543210",
+      "responseUrgency": "3 days",
+      "quotedPrice": 28000,
+      "totalAmount": 31304,
+      "platformFee": 2800,
+      "gstAmount": 504,
+      "artistPayout": 28000,
+      "escrowStatus": "NOT_INITIATED",
+      "createdAt": "2026-04-09T13:39:19.326Z",
+      "updatedAt": "2026-04-10T13:39:19.326Z",
+      "chat": [
+        {
+          "id": "chat-3",
+          "from": "BOOKER",
+          "body": "We need a 45-minute clean set for a senior corporate audience.",
+          "createdAt": "2026-04-09T13:39:19.326Z"
+        },
+        {
+          "id": "chat-4",
+          "from": "ARTIST",
+          "body": "Happy to do that. My quote includes show prep and travel.",
+          "createdAt": "2026-04-10T13:39:19.326Z"
+        }
+      ]
+    }
+  ],
+  "payments": [
+    {
+      "id": "payment-gf-001",
+      "bookingId": "booking-gf-001",
+      "amount": 22360,
+      "platformFee": 2000,
+      "gstAmount": 360,
+      "artistPayout": 20000,
+      "status": "PAID",
+      "paidAt": "2026-04-09T13:39:19.326Z",
+      "razorpayOrderId": "order_mock_001",
+      "razorpayPaymentId": "pay_mock_001",
+      "createdAt": "2026-04-09T13:39:19.326Z"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "review-1",
+      "bookingId": "booking-gf-001",
+      "fromId": "user-booker-1",
+      "toId": "user-artist-1",
+      "rating": 4.9,
+      "comment": "Beautiful audience connection and a very polished premium set.",
+      "eventType": "Wedding",
+      "createdAt": "2026-04-10T13:39:19.326Z"
+    },
+    {
+      "id": "review-2",
+      "bookingId": "booking-gf-002",
+      "fromId": "user-booker-1",
+      "toId": "user-artist-4",
+      "rating": 4.7,
+      "comment": "Sharp, clean, and perfectly paced for our corporate audience.",
+      "eventType": "Corporate Event",
+      "createdAt": "2026-04-10T13:39:19.326Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notification-1",
+      "userId": "user-booker-1",
+      "title": "Booking confirmed",
+      "body": "Your booking with SACH is confirmed and the payment is held in escrow.",
+      "type": "BOOKING_CONFIRMED",
+      "read": false,
+      "actionUrl": "/booking/booking-gf-001",
+      "createdAt": "2026-04-09T13:39:19.326Z"
+    },
+    {
+      "id": "notification-2",
+      "userId": "user-artist-1",
+      "title": "Payment held in escrow",
+      "body": "₹22,360 is held securely for your upcoming booking.",
+      "type": "PAYMENT_HELD_ARTIST",
+      "read": false,
+      "actionUrl": "/booking/booking-gf-001",
+      "createdAt": "2026-04-09T13:39:19.326Z"
+    }
+  ],
+  "savedArtists": [
+    {
+      "id": "saved-1",
+      "bookerId": "booker-profile-1",
+      "artistId": "artist-noor",
+      "savedAt": "2026-04-06T13:39:19.326Z"
+    },
+    {
+      "id": "saved-2",
+      "bookerId": "booker-profile-1",
+      "artistId": "artist-riya",
+      "savedAt": "2026-04-10T13:39:19.326Z"
+    }
+  ],
+  "carts": [
+    {
+      "bookerId": "booker-profile-1",
+      "artistIds": [
+        "artist-sach",
+        "artist-noor"
+      ],
+      "occasion": "Wedding",
+      "city": "Mumbai",
+      "updatedAt": "2026-04-11T13:39:19.326Z"
+    }
+  ],
+  "otpRequests": [],
+  "onboardingDrafts": [
+    {
+      "phone": "+918655688134",
+      "role": "ARTIST",
+      "step": 6,
+      "data": {
+        "legalName": "Shaurya Chaudhary",
+        "stageName": "Ved",
+        "dateOfBirth": "2023-01-17",
+        "gender": "male",
+        "profilePhoto": "https://picsum.photos/seed/giggifi-artist-profile/800/800",
+        "coverPhoto": "https://picsum.photos/seed/giggifi-artist-cover/1600/900",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "serviceableStates": [
+          "Maharashtra",
+          "Goa"
+        ],
+        "category": "Singer-Guitarist",
+        "subcategory": [
+          "Live Singer"
+        ],
+        "genres": [
+          "Bollywood",
+          "Sufi"
+        ],
+        "languages": [
+          "Hindi",
+          "English"
+        ],
+        "performanceTypes": [
+          "Solo",
+          "Acoustic"
+        ],
+        "yearsExperience": 4,
+        "bio": "singer songwriter, composer, performer",
+        "notableClients": "red fm, Ambani",
+        "portfolioPhotos": [
+          "https://picsum.photos/seed/onboard-1/1200/900",
+          "https://picsum.photos/seed/onboard-2/1200/900",
+          "https://picsum.photos/seed/onboard-3/1200/900"
+        ],
+        "portfolioVideos": [
+          "https://samplelib.com/lib/preview/mp4/sample-5s.mp4"
+        ],
+        "audioSamples": [
+          "https://samplelib.com/lib/preview/mp3/sample-3s.mp3"
+        ],
+        "packages": [
+          {
+            "title": "Solo",
+            "description": "Live solo performance for weddings, cocktails, intimate gatherings",
+            "price": 20000
+          },
+          {
+            "title": "Duo / Two-Piece Band",
+            "description": "Duo / Two-Piece Band",
+            "price": 27000
+          },
+          {
+            "title": "Four-Piece Band",
+            "description": "Four-Piece Band",
+            "price": 50000
+          },
+          {
+            "title": "Six to Seven Piece Band",
+            "description": "Six to Seven Piece Band",
+            "price": 90000
+          }
+        ],
+        "travelIncluded": "NEGOTIABLE",
+        "accommodationNeeded": true,
+        "minAdvanceBooking": 7,
+        "blackoutDates": [],
+        "availableWeekdays": true,
+        "availableWeekends": true,
+        "instagramUrl": "https://www.instagram.com/thesachinmusic",
+        "youtubeUrl": "https://www.youtube.com/thesachinmusic",
+        "spotifyUrl": "https://open.spotify.com/user/31v3xnqqti2imxftfzz5mp4t3rle",
+        "facebookUrl": "https://www.facebook.com/thesachinmusic",
+        "websiteUrl": "thesachinmusic.in",
+        "aadhaarNumber": "68765654653",
+        "panNumber": "ATP3456DFV",
+        "gstNumber": "56568653513513",
+        "bankAccountNumber": "544535464543",
+        "confirmBankAccountNumber": "544535464543",
+        "bankIFSC": "KGKDJF444",
+        "bankAccountName": "SHAURYA CHAUDHARY",
+        "agreements": {
+          "artistAgreement": true,
+          "cancellationPolicy": true,
+          "escrowTerms": true,
+          "privacyPolicy": true
+        }
+      },
+      "updatedAt": "2026-04-11T13:58:09.812Z"
+    }
+  ]
+}

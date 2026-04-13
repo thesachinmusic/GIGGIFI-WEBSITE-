@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ARTIST
+  BOOKER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum KYCStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BookingType {
+  ENQUIRY
+  QUICK_BOOKING
+}
+
+enum EscrowStatus {
+  NOT_INITIATED
+  HELD
+  RELEASING
+  RELEASED
+  REFUNDED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum DocType {
+  AADHAAR
+  PAN
+  GST
+  BANK_PROOF
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BookerType {
+  INDIVIDUAL
+  CORPORATE
+  PLANNER
+  AGENCY
+}
+
+enum BookingStatus {
+  ENQUIRY_SENT
+  ENQUIRY_VIEWED
+  QUOTE_RECEIVED
+  QUOTE_ACCEPTED
+  AWAITING_PAYMENT
+  PAYMENT_HELD
+  EVENT_UPCOMING
+  EVENT_COMPLETED
+  PAYOUT_PROCESSING
+  PAYOUT_RELEASED
+  CANCELLED_BY_BOOKER
+  CANCELLED_BY_ARTIST
+  DISPUTED
+  RESOLVED
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String?      @unique
+  phone         String       @unique
+  role          Role
+  status        UserStatus   @default(PENDING_VERIFICATION)
+  otpCode       String?
+  otpExpiry     DateTime?
+  emailVerified Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  artistProfile ArtistProfile?
+  bookerProfile BookerProfile?
+  notifications Notification[]
+  kycDocuments  KYCDocument[]
+}
+
+model ArtistProfile {
+  id                  String     @id @default(cuid())
+  userId              String     @unique
+  user                User       @relation(fields: [userId], references: [id])
+  legalName           String
+  stageName           String
+  dateOfBirth         DateTime
+  gender              String
+  profilePhoto        String?
+  coverPhoto          String?
+  city                String
+  state               String
+  serviceableStates   String[]
+  category            String
+  subcategory         String[]
+  genres              String[]
+  languages           String[]
+  performanceTypes    String[]
+  yearsExperience     Int        @default(0)
+  bio                 String?
+  notableClients      String?
+  portfolioPhotos     String[]
+  portfolioVideos     String[]
+  audioSamples        String[]
+  instagramUrl        String?
+  youtubeUrl          String?
+  spotifyUrl          String?
+  facebookUrl         String?
+  websiteUrl          String?
+  basePriceSolo       Int        @default(0)
+  basePriceBand       Int?
+  basePriceDJ         Int?
+  travelIncluded      String     @default("NEGOTIABLE")
+  accommodationNeeded Boolean    @default(false)
+  minAdvanceBooking   Int        @default(7)
+  blackoutDates       DateTime[]
+  availableWeekdays   Boolean    @default(true)
+  availableWeekends   Boolean    @default(true)
+  isAvailable         Boolean    @default(true)
+  aadhaarNumber       String?
+  panNumber           String?
+  gstNumber           String?
+  bankAccountNumber   String?
+  bankIFSC            String?
+  bankAccountName     String?
+  stripeAccountId     String?
+  razorpayAccountId   String?
+  kycStatus           KYCStatus  @default(PENDING)
+  onboardingStep      Int        @default(1)
+  rating              Float      @default(0)
+  totalBookings       Int        @default(0)
+  termsAcceptedAt     DateTime?
+  createdAt           DateTime   @default(now())
+}
+
+model BookerProfile {
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  user            User       @relation(fields: [userId], references: [id])
+  fullName        String
+  email           String
+  companyName     String?
+  bookerType      BookerType @default(INDIVIDUAL)
+  city            String?
+  state           String?
+  kycVerified     Boolean    @default(false)
+  termsAcceptedAt DateTime?
+  createdAt       DateTime   @default(now())
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookerId        String
+  artistId        String
+  bookingType     BookingType
+  status          BookingStatus @default(ENQUIRY_SENT)
+  eventName       String
+  eventType       String
+  eventDate       DateTime
+  isFlexibleDate  Boolean       @default(false)
+  alternateDates  DateTime[]
+  eventStartTime  String?
+  eventEndTime    String?
+  venueType       String?
+  venueName       String?
+  venueAddress    String?
+  eventCity       String
+  eventState      String?
+  audienceSize    Int
+  duration        Int
+  performanceType String?
+  languagePref    String[]
+  specialRequests String?
+  soundAvailable  Boolean       @default(false)
+  lightAvailable  Boolean       @default(false)
+  travelArranged  Boolean       @default(false)
+  accomProvided   Boolean       @default(false)
+  budgetMin       Int?
+  budgetMax       Int?
+  contactPerson   String?
+  contactPhone    String?
+  responseUrgency String?
+  moodboardUrl    String?
+  quotedPrice     Int?
+  totalAmount     Int?
+  platformFee     Int?
+  gstAmount       Int?
+  artistPayout    Int?
+  escrowStatus    EscrowStatus  @default(NOT_INITIATED)
+  contractUrl     String?
+  payment         Payment?
+  disputeReason   String?
+  cancelReason    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  bookingId             String        @unique
+  booking               Booking       @relation(fields: [bookingId], references: [id])
+  razorpayOrderId       String?
+  razorpayPaymentId     String?
+  stripePaymentIntentId String?
+  amount                Int
+  platformFee           Int
+  gstAmount             Int
+  artistPayout          Int
+  status                PaymentStatus @default(PENDING)
+  paidAt                DateTime?
+  releasedAt            DateTime?
+  refundedAt            DateTime?
+  refundAmount          Int?
+  createdAt             DateTime      @default(now())
+}
+
+model KYCDocument {
+  id                 String             @id @default(cuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id])
+  type               DocType
+  fileUrl            String
+  verificationStatus VerificationStatus @default(PENDING)
+  rejectionReason    String?
+  reviewedAt         DateTime?
+  reviewedBy         String?
+  createdAt          DateTime           @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String
+  fromId    String
+  toId      String
+  rating    Float
+  comment   String
+  eventType String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  type      String
+  read      Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+}
+
+model SavedArtist {
+  id       String   @id @default(cuid())
+  bookerId String
+  artistId String
+  savedAt  DateTime @default(now())
+}

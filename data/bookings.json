@@ -1,0 +1,32 @@
+[
+  {
+    "id": "GF-RITIKA-WEDD-001",
+    "clientName": "Ritika Sharma",
+    "email": "ritika@example.com",
+    "phone": "+91 98111 22334",
+    "city": "Mumbai",
+    "eventType": "Wedding Cocktail",
+    "eventDate": "2026-05-18",
+    "budget": "Rs 60,000 - Rs 1,20,000",
+    "artistId": "riya-live",
+    "artistName": "Riya Khanna",
+    "notes": "Need a live singer for a luxury cocktail evening.",
+    "status": "Shortlist sent",
+    "createdAt": "2026-04-10T08:30:00.000Z"
+  },
+  {
+    "id": "GF-ARJUN-CORP-002",
+    "clientName": "Arjun Khanna",
+    "email": "arjun@example.com",
+    "phone": "+91 98200 11223",
+    "city": "Delhi",
+    "eventType": "Corporate Annual Night",
+    "eventDate": "2026-05-27",
+    "budget": "Rs 40,000 - Rs 80,000",
+    "artistId": "rohit-comedy",
+    "artistName": "Rohit Bawa",
+    "notes": "Looking for brand-safe clean comedy and a host option.",
+    "status": "New lead",
+    "createdAt": "2026-04-11T09:45:00.000Z"
+  }
+]

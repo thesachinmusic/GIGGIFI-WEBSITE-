@@ -1,0 +1,152 @@
+{
+  "brand": {
+    "name": "GiggFi Live",
+    "headline": "The website version of your artist-booking app, ready for discovery, enquiries, and conversion.",
+    "subheadline": "Built for weddings, private parties, colleges, hotels, and corporate events with a client flow and an artist ops view."
+  },
+  "stats": [
+    { "value": "150+", "label": "curated artists" },
+    { "value": "12 cities", "label": "launch-ready coverage" },
+    { "value": "24 hrs", "label": "average response promise" }
+  ],
+  "services": [
+    {
+      "id": "weddings",
+      "title": "Wedding programming",
+      "audience": "Cocktails, sangeet, varmala, afterparty",
+      "summary": "Premium singers, bands, DJs, anchors, and choreography-led acts for multi-event wedding calendars."
+    },
+    {
+      "id": "corporate",
+      "title": "Corporate entertainment",
+      "audience": "Launches, annual nights, awards, mixers",
+      "summary": "Stage hosts, clean comedians, live bands, and polished acts that feel brand-safe and high-energy."
+    },
+    {
+      "id": "private",
+      "title": "Private celebrations",
+      "audience": "Birthdays, house parties, rooftop nights",
+      "summary": "Fast-turnaround talent curation for intimate and social events where vibe, timing, and budget matter."
+    }
+  ],
+  "phases": [
+    {
+      "name": "Phase 1",
+      "headline": "Brand, trust, and discovery",
+      "detail": "Visitors understand what you do, browse categories, and shortlist artists without friction."
+    },
+    {
+      "name": "Phase 2",
+      "headline": "Live booking intake",
+      "detail": "Event briefs move into a backend-backed booking pipeline so you can collect and track leads."
+    },
+    {
+      "name": "Phase 3",
+      "headline": "Operations and scale",
+      "detail": "Admin tools, artist logins, payments, CRM, and production workflows can layer on top of the same backend."
+    }
+  ],
+  "examplePages": [
+    {
+      "title": "Homepage",
+      "summary": "Luxury-first hero, category cards, trust proof, and a direct enquiry CTA."
+    },
+    {
+      "title": "Artist discovery",
+      "summary": "Filterable artist cards by city and category with pricing, format, and quality signals."
+    },
+    {
+      "title": "Booking brief",
+      "summary": "A real form connected to the backend so web visitors become trackable leads."
+    },
+    {
+      "title": "Ops console",
+      "summary": "A lightweight website-side dashboard that shows submitted bookings and current lead status."
+    }
+  ],
+  "testimonials": [
+    {
+      "name": "Ritika S.",
+      "role": "Wedding planner",
+      "quote": "We found the right singer and emcee in one pass, and the brief looked client-ready immediately."
+    },
+    {
+      "name": "Arjun K.",
+      "role": "Corporate events lead",
+      "quote": "The shortlisting experience is fast, premium, and easy to hand over internally."
+    },
+    {
+      "name": "Studio Noor",
+      "role": "Artist partner",
+      "quote": "The website feels like a polished front door for the app instead of a disconnected marketing page."
+    }
+  ],
+  "artists": [
+    {
+      "id": "riya-live",
+      "name": "Riya Khanna",
+      "category": "Singer",
+      "city": "Mumbai",
+      "price": "Rs 18,000 onwards",
+      "rating": 4.9,
+      "tagline": "Sufi, unplugged, wedding live moments",
+      "formats": ["Cocktail", "Family functions", "Luxury lounges"],
+      "image": "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=1200&q=80"
+    },
+    {
+      "id": "sunset-band",
+      "name": "The Sunset Band",
+      "category": "Band",
+      "city": "Pune",
+      "price": "Rs 42,000 onwards",
+      "rating": 4.8,
+      "tagline": "Reception-stage energy with premium production",
+      "formats": ["Reception", "Festivals", "Corporate nights"],
+      "image": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1200&q=80"
+    },
+    {
+      "id": "dj-kiara",
+      "name": "DJ Kiara",
+      "category": "DJ",
+      "city": "Delhi",
+      "price": "Rs 20,000 onwards",
+      "rating": 4.8,
+      "tagline": "Commercial, Bollywood, and wedding afterparties",
+      "formats": ["Afterparty", "Private nights", "Club sets"],
+      "image": "https://images.unsplash.com/photo-1571266028243-d220c9ff84c3?auto=format&fit=crop&w=1200&q=80"
+    },
+    {
+      "id": "maya-crew",
+      "name": "Maya Crew",
+      "category": "Dancer",
+      "city": "Bengaluru",
+      "price": "Rs 24,000 onwards",
+      "rating": 4.9,
+      "tagline": "High-energy choreography and visual entries",
+      "formats": ["Sangeet", "Corporate openers", "Brand launches"],
+      "image": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1200&q=80"
+    },
+    {
+      "id": "aman-host",
+      "name": "Aman Bedi",
+      "category": "Anchor",
+      "city": "Jaipur",
+      "price": "Rs 17,000 onwards",
+      "rating": 4.7,
+      "tagline": "Bilingual host for polished event flow",
+      "formats": ["Corporate", "Awards", "Destination weddings"],
+      "image": "https://images.unsplash.com/photo-1507677421208-7f1f3f1e8b7f?auto=format&fit=crop&w=1200&q=80"
+    },
+    {
+      "id": "rohit-comedy",
+      "name": "Rohit Bawa",
+      "category": "Comedy",
+      "city": "Gurugram",
+      "price": "Rs 18,000 onwards",
+      "rating": 4.8,
+      "tagline": "Clean comedy for mixed and corporate audiences",
+      "formats": ["Corporate", "Private dining", "Hosted evenings"],
+      "image": "https://images.unsplash.com/photo-1527224857830-43a7acc85260?auto=format&fit=crop&w=1200&q=80"
+    }
+  ]
+}

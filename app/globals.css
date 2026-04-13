@@ -1,0 +1,73 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --background: #06020b;
+  --surface: #0f0918;
+  --card: #0d0717;
+  --gradient: linear-gradient(135deg,#a53eff,#ff44b7,#ffb13e);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #06020b;
+  color: #ffffff;
+  font-family: "Inter", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ambient-underlay {
+  background:
+    radial-gradient(circle_at_top_left, rgba(171, 61, 255, 0.22), transparent 30%),
+    radial-gradient(circle_at_top_right, rgba(255, 183, 64, 0.16), transparent 28%),
+    radial-gradient(circle_at_bottom, rgba(255, 54, 171, 0.18), transparent 35%);
+}
+
+.glass-card {
+  @apply rounded-[2rem] border border-white/10 bg-white/5 backdrop-blur-xl;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg,#a53eff,#ff44b7,#ffb13e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.surface-section {
+  @apply rounded-[1.8rem] border border-white/10 bg-[#0f0918]/70;
+}
