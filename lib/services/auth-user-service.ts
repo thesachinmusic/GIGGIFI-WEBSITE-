@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AuthProvider, UserStatus, type Prisma, type Role } from "@prisma/client";
+import { UserStatus, type Prisma, type Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const authSessionUserSelect = {
@@ -14,7 +14,6 @@ const authSessionUserSelect = {
   onboardingState: true,
   emailVerified: true,
   phoneVerifiedAt: true,
-  lastAuthProvider: true,
   artistProfile: {
     select: { id: true },
   },
@@ -37,7 +36,6 @@ const mergeUserSelect = {
   onboardingState: true,
   emailVerified: true,
   phoneVerifiedAt: true,
-  lastAuthProvider: true,
   artistProfile: {
     select: { id: true },
   },
@@ -200,7 +198,6 @@ async function mergeUsersIntoCurrent(
       emailVerified: pickDate(keepUser.emailVerified, removeUser.emailVerified),
       phoneVerifiedAt: pickDate(keepUser.phoneVerifiedAt, removeUser.phoneVerifiedAt),
       lastLoginAt: new Date(),
-      lastAuthProvider: keepUser.lastAuthProvider ?? removeUser.lastAuthProvider,
     },
   });
 
@@ -320,10 +317,4 @@ export async function setSelectedUserRole(input: {
     },
     select: authSessionUserSelect,
   });
-}
-
-export function authProviderToLabel(provider: AuthProvider | null | undefined) {
-  if (provider === AuthProvider.GOOGLE) return "Google";
-  if (provider === AuthProvider.PHONE_OTP) return "Phone OTP";
-  return null;
 }

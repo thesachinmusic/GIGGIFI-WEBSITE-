@@ -1,5 +1,5 @@
 import { DefaultSession } from "next-auth";
-import { AuthProvider, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -13,7 +13,6 @@ declare module "next-auth" {
       onboardingDraftRole?: Role | null;
       hasArtistProfile: boolean;
       hasBookerProfile: boolean;
-      lastAuthProvider: AuthProvider | null;
     };
   }
 }
@@ -28,6 +27,5 @@ declare module "next-auth/jwt" {
     onboardingDraftRole?: Role | null;
     hasArtistProfile?: boolean;
     hasBookerProfile?: boolean;
-    lastAuthProvider?: AuthProvider | null;
   }
 }

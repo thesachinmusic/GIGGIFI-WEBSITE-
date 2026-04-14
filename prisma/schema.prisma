@@ -24,11 +24,6 @@ enum UserStatus {
   PENDING_VERIFICATION
 }
 
-enum AuthProvider {
-  GOOGLE
-  PHONE_OTP
-}
-
 enum KYCStatus {
   PENDING
   APPROVED
@@ -115,7 +110,6 @@ model User {
   phone           String?           @unique
   image           String?
   role            Role?
-  lastAuthProvider AuthProvider?
   status          UserStatus        @default(PENDING_VERIFICATION)
   onboardingState OnboardingState   @default(ROLE_SELECTION)
   emailVerified   DateTime?
