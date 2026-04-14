@@ -62,12 +62,18 @@ import {
   type MockDatabase,
   type ReviewRecord,
 } from "@/lib/mock-data";
+import { resolveAuthenticatedAppPath } from "@/lib/auth-routing";
 
 type SessionPayload = {
   userId: string;
   role: "ARTIST" | "BOOKER" | "ADMIN" | null;
   phone: string;
+  email: string;
   name: string;
+  onboardingState: string | null;
+  onboardingDraftRole: "ARTIST" | "BOOKER" | "ADMIN" | null;
+  hasArtistProfile: boolean;
+  hasBookerProfile: boolean;
 };
 
 type Props = {
@@ -133,6 +139,7 @@ function pageName(slug: string[]) {
   if (!joined) return "Home";
   const map: Record<string, string> = {
     login: "Login",
+    "onboarding/contact": "Complete Contact",
     "onboarding/choice": "Choose Role",
     "onboarding/artist": "Artist Onboarding",
     "onboarding/booker": "Booker Onboarding",
@@ -285,7 +292,10 @@ export function GiggiFiApp({
 
   const isArtistConsole = session?.role === "ARTIST";
   const showSubHeader =
-    pathname !== "/" && pathname !== "/login" && pathname !== "/onboarding/choice";
+    pathname !== "/" &&
+    pathname !== "/login" &&
+    pathname !== "/onboarding/contact" &&
+    pathname !== "/onboarding/choice";
   const selectedArtist = slug[0] === "booker" && slug[1] === "artist" ? db.artists.find((item) => item.id === slug[2]) : undefined;
   const selectedBooking = slug[1] ? db.bookings.find((item) => item.id === slug[1]) : undefined;
   const selectedBookingArtist = selectedBooking
@@ -366,7 +376,25 @@ export function GiggiFiApp({
             />
           ) : null}
 
-          {routeKey === "onboarding/choice" ? <ChoicePage onNavigate={go} /> : null}
+          {routeKey === "onboarding/contact" ? (
+            <ContactCompletionPage
+              session={session}
+              authProviders={authProviders}
+              onDone={async (path) => {
+                setToast("Contact details updated.");
+                await refreshFromServer(path);
+              }}
+            />
+          ) : null}
+
+          {routeKey === "onboarding/choice" ? (
+            <ChoicePage
+              session={session}
+              onDone={async (path) => {
+                await refreshFromServer(path);
+              }}
+            />
+          ) : null}
 
           {routeKey === "onboarding/artist" ? (
             <ArtistOnboardingPage
@@ -381,6 +409,8 @@ export function GiggiFiApp({
           {routeKey === "onboarding/booker" ? (
             <BookerOnboardingPage
               phone={session?.phone ?? null}
+              email={session?.email ?? null}
+              name={session?.name ?? null}
               onDone={async (path) => {
                 setToast("Booker account created.");
                 await refreshFromServer(path);
@@ -783,13 +813,20 @@ function SiteHeader({
               <button
                 onClick={() =>
                   onNavigate(
-                    session.role === "ARTIST"
-                      ? "/artist/dashboard"
-                      : session.role === "BOOKER"
-                        ? "/booker/dashboard"
-                        : session.role === "ADMIN"
-                          ? "/admin"
-                          : "/onboarding/choice",
+                    resolveAuthenticatedAppPath({
+                      role: session.role,
+                      phone: session.phone,
+                      email: session.email,
+                      onboardingState:
+                        session.onboardingState as
+                          | "ROLE_SELECTION"
+                          | "PROFILE_IN_PROGRESS"
+                          | "COMPLETE"
+                          | null,
+                      onboardingDraftRole: session.onboardingDraftRole,
+                      hasArtistProfile: session.hasArtistProfile,
+                      hasBookerProfile: session.hasBookerProfile,
+                    }),
                   )
                 }
                 className={`${gradientClass} flex h-12 items-center rounded-2xl px-6 font-semibold text-black`}
@@ -1438,7 +1475,8 @@ function LoginPage({
         <div>
           <h1 className="text-4xl font-black">Welcome to GiggiFi</h1>
           <p className="mt-3 text-white/70">
-            We&apos;ll send a one-time password to verify your number. No spam, ever.
+            Sign in with OTP or Google. We&apos;ll collect any missing phone or email right after login
+            before you choose Booker or Artist.
           </p>
         </div>
 
@@ -1557,13 +1595,270 @@ function LoginPage({
   );
 }
 
-function ChoicePage({ onNavigate }: { onNavigate: (path: string) => void }) {
+function ContactCompletionPage({
+  session,
+  authProviders,
+  onDone,
+}: {
+  session: SessionPayload | null;
+  authProviders: {
+    googleEnabled: boolean;
+    otpMode: "twilio" | "preview" | "unavailable";
+  };
+  onDone: (path: string) => Promise<void>;
+}) {
+  const [name, setName] = useState(session?.name ?? "");
+  const [email, setEmail] = useState(session?.email ?? "");
+  const [phone, setPhone] = useState(session?.phone ?? "");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(Boolean(session?.phone));
+  const [countdown, setCountdown] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [previewOtp, setPreviewOtp] = useState("");
+  const otpUnavailable = authProviders.otpMode === "unavailable";
+  const missingPhone = !session?.phone;
+  const missingEmail = !session?.email;
+
+  useEffect(() => {
+    if (!countdown) return;
+    const timer = window.setTimeout(() => setCountdown((current) => current - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
+
+  async function sendPhoneOtp() {
+    if (otpUnavailable) {
+      setError("Phone verification is not configured yet on this environment.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await jsonRequest<{
+        success: boolean;
+        previewOtp?: string;
+      }>("/api/auth/contact/send-phone-otp", {
+        method: "POST",
+        body: JSON.stringify({ phone }),
+      });
+
+      setOtpSent(true);
+      setCountdown(60);
+      setPreviewOtp(response.previewOtp ?? "");
+      setOtp("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send OTP.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyPhone() {
+    setLoading(true);
+    setError("");
+
+    try {
+      await jsonRequest("/api/auth/contact/verify-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, otp }),
+      });
+      await onDone("/onboarding/contact");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not verify phone.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveEmail() {
+    setLoading(true);
+    setError("");
+
+    try {
+      await jsonRequest("/api/auth/contact", {
+        method: "POST",
+        body: JSON.stringify({ email, name }),
+      });
+      await onDone("/onboarding/contact");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save email.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl py-10">
+      <GlassCard className="space-y-8 p-8 md:p-10">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-3">
+            <SectionLabel>Mandatory contact completion</SectionLabel>
+            <h1 className="text-4xl font-black">Finish your GiggiFi contact identity</h1>
+            <p className="max-w-2xl text-white/70">
+              Login only proves who you are. Before choosing Booker or Artist, we need both your
+              phone number and your email saved on the same base account.
+            </p>
+          </div>
+          <div className="rounded-[1.5rem] border border-white/10 bg-black/20 px-5 py-4 text-sm text-white/70">
+            <div className="font-semibold text-white">What happens next</div>
+            <div className="mt-2">1. Complete missing contact details</div>
+            <div>2. Choose Booker or Artist</div>
+            <div>3. Continue to the right dashboard or onboarding flow</div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-[2rem] border border-white/10 bg-black/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xl font-bold">Email address</div>
+                <div className="mt-2 text-sm text-white/55">
+                  Required for receipts, account recovery, and booking communication.
+                </div>
+              </div>
+              <span
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
+                  missingEmail ? "bg-amber-400/15 text-amber-200" : "bg-emerald-400/15 text-emerald-200",
+                )}
+              >
+                {missingEmail ? "Missing" : "Saved"}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <Field label="Full name" value={name} onChange={setName} />
+              <Field label="Email" value={email} onChange={setEmail} />
+              {missingEmail ? (
+                <button
+                  disabled={loading}
+                  className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black`}
+                  onClick={saveEmail}
+                >
+                  {loading ? "Saving..." : "Save Email"}
+                </button>
+              ) : (
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                  {email}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-black/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xl font-bold">Phone number</div>
+                <div className="mt-2 text-sm text-white/55">
+                  Required for OTP login, urgent booking communication, and trust checks.
+                </div>
+              </div>
+              <span
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
+                  missingPhone ? "bg-amber-400/15 text-amber-200" : "bg-emerald-400/15 text-emerald-200",
+                )}
+              >
+                {missingPhone ? "Missing" : "Verified"}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <Field label="Phone" value={phone} onChange={setPhone} />
+              {missingPhone ? (
+                <>
+                  {!otpSent ? (
+                    <button
+                      disabled={loading || otpUnavailable}
+                      className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black disabled:opacity-60`}
+                      onClick={sendPhoneOtp}
+                    >
+                      {loading ? "Sending..." : "Send OTP"}
+                    </button>
+                  ) : (
+                    <>
+                      <Field
+                        label="Enter OTP"
+                        value={otp}
+                        onChange={setOtp}
+                        hint={countdown > 0 ? `Resend OTP in ${countdown}s` : "You can resend OTP now."}
+                      />
+                      <button
+                        disabled={loading}
+                        className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black`}
+                        onClick={verifyPhone}
+                      >
+                        {loading ? "Verifying..." : "Verify Phone"}
+                      </button>
+                      {countdown === 0 ? (
+                        <button className="text-sm text-[#ffb340]" onClick={sendPhoneOtp}>
+                          Resend OTP
+                        </button>
+                      ) : null}
+                      {previewOtp ? (
+                        <div className="rounded-2xl border border-[#ffb340]/20 bg-[#ffb340]/10 p-3 text-sm text-[#ffb340]">
+                          Local preview OTP: <span className="font-bold">{previewOtp}</span>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                  {phone}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {error ? <div className="text-sm text-red-300">{error}</div> : null}
+      </GlassCard>
+    </div>
+  );
+}
+
+function ChoicePage({
+  session,
+  onDone,
+}: {
+  session: SessionPayload | null;
+  onDone: (path: string) => Promise<void>;
+}) {
+  const [loadingRole, setLoadingRole] = useState<"ARTIST" | "BOOKER" | null>(null);
+  const [error, setError] = useState("");
+
+  async function selectRole(role: "ARTIST" | "BOOKER") {
+    setLoadingRole(role);
+    setError("");
+
+    try {
+      const response = await jsonRequest<{ redirect: string }>("/api/onboarding/role", {
+        method: "POST",
+        body: JSON.stringify({ role }),
+      });
+      await onDone(response.redirect);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not continue to the selected role.");
+    } finally {
+      setLoadingRole(null);
+    }
+  }
+
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-5xl flex-col items-center justify-center gap-8 py-12">
       <Wordmark />
       <div className="text-center">
         <h1 className="text-5xl font-black">How do you want to use GiggiFi?</h1>
-        <p className="mt-4 text-white/70">Choose your role — this cannot be changed later.</p>
+        <p className="mt-4 text-white/70">
+          Your phone and email are now secured on one account. Choose the experience you want to
+          continue with.
+        </p>
+      </div>
+      <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/60">
+        Signed in as {session?.email || session?.phone || "GiggiFi user"}
       </div>
       <div className="grid w-full gap-6 md:grid-cols-2">
         <RoleCard
@@ -1578,7 +1873,8 @@ function ChoicePage({ onNavigate }: { onNavigate: (path: string) => void }) {
           gradient
           cta="Continue as Booker"
           icon={<CalendarDays size={26} />}
-          onClick={() => onNavigate("/onboarding/booker")}
+          loading={loadingRole === "BOOKER"}
+          onClick={() => selectRole("BOOKER")}
         />
         <RoleCard
           title="I'm an Artist"
@@ -1591,11 +1887,14 @@ function ChoicePage({ onNavigate }: { onNavigate: (path: string) => void }) {
           ]}
           cta="Continue as Artist"
           icon={<Mic2 size={26} />}
-          onClick={() => onNavigate("/onboarding/artist")}
+          loading={loadingRole === "ARTIST"}
+          onClick={() => selectRole("ARTIST")}
         />
       </div>
+      {error ? <div className="text-sm text-red-300">{error}</div> : null}
       <div className="text-center text-sm text-white/50">
-        You can only have one account type per mobile number. Choose carefully.
+        Returning users go straight to their existing dashboard. New users continue into the right
+        onboarding flow automatically.
       </div>
     </div>
   );
@@ -1609,6 +1908,7 @@ function RoleCard({
   icon,
   onClick,
   gradient,
+  loading,
 }: {
   title: string;
   description: string;
@@ -1617,6 +1917,7 @@ function RoleCard({
   icon: React.ReactNode;
   onClick: () => void;
   gradient?: boolean;
+  loading?: boolean;
 }) {
   return (
     <GlassCard className="h-full p-8">
@@ -1637,12 +1938,13 @@ function RoleCard({
       </div>
       <button
         onClick={onClick}
+        disabled={loading}
         className={cn(
-          "mt-8 h-12 w-full rounded-2xl px-6 font-semibold",
+          "mt-8 h-12 w-full rounded-2xl px-6 font-semibold disabled:cursor-not-allowed disabled:opacity-60",
           gradient ? `${gradientClass} text-black` : "border border-white/15 bg-white/5 text-white",
         )}
       >
-        {cta}
+        {loading ? "Continuing..." : cta}
       </button>
     </GlassCard>
   );
@@ -1941,17 +2243,21 @@ function ArtistOnboardingPage({
 
 function BookerOnboardingPage({
   phone,
+  email,
+  name,
   onDone,
 }: {
   phone: string | null;
+  email: string | null;
+  name: string | null;
   onDone: (path: string) => Promise<void>;
 }) {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState<any>({
-    fullName: "",
-    email: "",
+    fullName: name ?? "",
+    email: email ?? "",
     companyName: "",
     bookerType: "INDIVIDUAL",
     city: "Mumbai",

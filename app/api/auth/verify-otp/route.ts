@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildDashboardPath, hasCompletedRoleProfile } from "@/lib/auth-routing";
+import { resolveAuthenticatedAppPath } from "@/lib/auth-routing";
 import { verifyOtpChallenge } from "@/lib/otp";
 import { prisma } from "@/lib/prisma";
 import { verifyOtpSchema } from "@/lib/validations";
@@ -22,21 +22,26 @@ export async function POST(request: Request) {
     const existingUser = await prisma.user.findUnique({
       where: { phone: parsed.data.phone },
       select: {
+        email: true,
         role: true,
+        onboardingState: true,
         artistProfile: { select: { id: true } },
         bookerProfile: { select: { id: true } },
+        onboardingDraft: { select: { role: true } },
       },
     });
 
-    const redirect =
-      existingUser &&
-      hasCompletedRoleProfile({
-        role: existingUser.role,
-        hasArtistProfile: Boolean(existingUser.artistProfile),
-        hasBookerProfile: Boolean(existingUser.bookerProfile),
-      })
-        ? buildDashboardPath(existingUser.role)
-        : "/onboarding/choice";
+    const redirect = existingUser
+      ? resolveAuthenticatedAppPath({
+          role: existingUser.role,
+          phone: parsed.data.phone,
+          email: existingUser.email,
+          onboardingState: existingUser.onboardingState,
+          onboardingDraftRole: existingUser.onboardingDraft?.role ?? null,
+          hasArtistProfile: Boolean(existingUser.artistProfile),
+          hasBookerProfile: Boolean(existingUser.bookerProfile),
+        })
+      : "/onboarding/contact?missing=email";
 
     return NextResponse.json({
       success: true,

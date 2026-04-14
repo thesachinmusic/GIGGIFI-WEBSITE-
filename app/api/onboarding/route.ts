@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { buildDashboardPath } from "@/lib/auth-routing";
+import { buildDashboardPath, hasRequiredContactDetails } from "@/lib/auth-routing";
 import { getServerAuthSession } from "@/lib/auth";
+import { getAuthSessionUser } from "@/lib/services/auth-user-service";
 import {
   completeArtistOnboarding,
   completeBookerOnboarding,
@@ -14,6 +15,14 @@ export async function POST(request: Request) {
   const session = await getServerAuthSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Login required before onboarding." }, { status: 401 });
+  }
+
+  const currentUser = await getAuthSessionUser(session.user.id);
+  if (!currentUser || !hasRequiredContactDetails(currentUser)) {
+    return NextResponse.json(
+      { error: "Complete your phone number and email before role onboarding." },
+      { status: 400 },
+    );
   }
 
   const body = await request.json();

@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: {
+      role: parsed.data.role,
       onboardingState: "PROFILE_IN_PROGRESS",
     },
   });

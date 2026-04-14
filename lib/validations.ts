@@ -19,6 +19,12 @@ export const otpSchema = z
   .trim()
   .regex(/^\d{6}$/, "Enter the 6-digit OTP");
 
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Enter a valid email address");
+
 export const sendOtpSchema = z.object({
   phone: phoneSchema,
 });
@@ -26,6 +32,20 @@ export const sendOtpSchema = z.object({
 export const verifyOtpSchema = z.object({
   phone: phoneSchema,
   otp: otpSchema,
+});
+
+export const completeContactSchema = z.object({
+  email: emailSchema,
+  name: z
+    .string()
+    .trim()
+    .min(2, "Enter your full name")
+    .max(120, "Name is too long")
+    .optional(),
+});
+
+export const selectRoleSchema = z.object({
+  role: z.enum(["ARTIST", "BOOKER"]),
 });
 
 export const onboardingDraftSchema = z.object({

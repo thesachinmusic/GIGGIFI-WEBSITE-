@@ -78,6 +78,6 @@ export async function getViewerData(session?: { userId: string; role: Role }) {
     user,
     bookerProfile,
     artistProfile,
-    dashboardPath: user ? buildDashboardPath(user.role) : "/login",
+    dashboardPath: user?.role ? buildDashboardPath(user.role) : user ? "/onboarding/choice" : "/login",
   };
 }

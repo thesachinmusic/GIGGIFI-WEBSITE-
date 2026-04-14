@@ -154,7 +154,7 @@ export async function loadAppData(): Promise<MockDatabase> {
       id: user.id,
       phone: user.phone ?? "",
       email: user.email ?? undefined,
-      role: (user.role ?? "BOOKER") as UserRecord["role"],
+      role: user.role ?? null,
       status: user.status,
       name: user.name ?? user.phone ?? "GiggiFi User",
       emailVerified: Boolean(user.emailVerified),

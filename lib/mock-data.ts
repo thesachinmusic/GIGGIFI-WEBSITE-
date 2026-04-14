@@ -40,7 +40,7 @@ export interface UserRecord {
   id: string;
   phone: string;
   email?: string;
-  role: Role;
+  role: Role | null;
   status: UserStatus;
   name: string;
   emailVerified: boolean;

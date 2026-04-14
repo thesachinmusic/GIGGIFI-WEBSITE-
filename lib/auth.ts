@@ -1,13 +1,14 @@
 import "server-only";
 
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { Role, UserStatus, type Prisma } from "@prisma/client";
+import { AuthProvider, Role, UserStatus, type Prisma } from "@prisma/client";
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import { getOtpMode, verifyOtpChallenge } from "@/lib/otp";
+import { getAuthSessionUser } from "@/lib/services/auth-user-service";
 import { normalizeIndianPhone, verifyOtpSchema } from "@/lib/validations";
 
 export function isGoogleAuthEnabled() {
@@ -19,28 +20,6 @@ export function getAuthProviderFlags() {
     googleEnabled: isGoogleAuthEnabled(),
     otpMode: getOtpMode(),
   };
-}
-
-async function findSessionUser(userId: string) {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      image: true,
-      role: true,
-      status: true,
-      onboardingState: true,
-      artistProfile: {
-        select: { id: true },
-      },
-      bookerProfile: {
-        select: { id: true },
-      },
-    },
-  });
 }
 
 async function ensureOtpUser(phone: string) {
@@ -55,6 +34,7 @@ async function ensureOtpUser(phone: string) {
       data: {
         phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(),
+        lastAuthProvider: AuthProvider.PHONE_OTP,
         status: existing.status === UserStatus.SUSPENDED ? existing.status : UserStatus.ACTIVE,
       },
     });
@@ -66,6 +46,7 @@ async function ensureOtpUser(phone: string) {
       name: normalizedPhone,
       phoneVerifiedAt: new Date(),
       lastLoginAt: new Date(),
+      lastAuthProvider: AuthProvider.PHONE_OTP,
       status: UserStatus.ACTIVE,
     },
   });
@@ -134,7 +115,9 @@ export const authOptions: NextAuthOptions = {
         const profileRecord =
           profile && typeof profile === "object" ? (profile as Record<string, unknown>) : null;
         updates.status = UserStatus.ACTIVE;
+        updates.lastAuthProvider = AuthProvider.GOOGLE;
         updates.emailVerified = new Date();
+        updates.email = user.email ?? undefined;
         updates.name =
           user.name ??
           (typeof profile?.name === "string" ? profile.name : undefined) ??
@@ -160,7 +143,7 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      const dbUser = await findSessionUser(userId);
+      const dbUser = await getAuthSessionUser(userId);
       if (!dbUser) {
         return token;
       }
@@ -171,9 +154,13 @@ export const authOptions: NextAuthOptions = {
       token.picture = dbUser.image ?? token.picture;
       token.role = dbUser.role ?? null;
       token.phone = dbUser.phone ?? null;
+      token.emailVerified = Boolean(dbUser.emailVerified);
+      token.phoneVerified = Boolean(dbUser.phoneVerifiedAt);
       token.onboardingState = dbUser.onboardingState;
+      token.onboardingDraftRole = dbUser.onboardingDraft?.role ?? null;
       token.hasArtistProfile = Boolean(dbUser.artistProfile);
       token.hasBookerProfile = Boolean(dbUser.bookerProfile);
+      token.lastAuthProvider = dbUser.lastAuthProvider ?? null;
 
       return token;
     },
@@ -185,9 +172,15 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.sub;
       session.user.role = (token.role as Role | null | undefined) ?? null;
       session.user.phone = (token.phone as string | null | undefined) ?? null;
+      session.user.emailVerified = Boolean(token.emailVerified);
+      session.user.phoneVerified = Boolean(token.phoneVerified);
       session.user.onboardingState = token.onboardingState as string | null | undefined;
+      session.user.onboardingDraftRole =
+        (token.onboardingDraftRole as Role | null | undefined) ?? null;
       session.user.hasArtistProfile = Boolean(token.hasArtistProfile);
       session.user.hasBookerProfile = Boolean(token.hasBookerProfile);
+      session.user.lastAuthProvider =
+        (token.lastAuthProvider as AuthProvider | null | undefined) ?? null;
 
       return session;
     },

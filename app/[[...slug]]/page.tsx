@@ -26,7 +26,12 @@ export default async function RoutedPage({
               userId: session.user.id,
               role: session.user.role ?? null,
               phone: session.user.phone ?? "",
+              email: session.user.email ?? "",
               name: session.user.name ?? "GiggiFi User",
+              onboardingState: session.user.onboardingState ?? null,
+              onboardingDraftRole: session.user.onboardingDraftRole ?? null,
+              hasArtistProfile: session.user.hasArtistProfile,
+              hasBookerProfile: session.user.hasBookerProfile,
             }
           : null
       }
