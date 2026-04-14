@@ -10,9 +10,11 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 # 0) Current Handoff Snapshot
 
 ## Latest important commit
-- Current local `HEAD`: `c7d2c04`
-- Latest auth fix commit message:
-  `Use Twilio native OTP verification`
+- Current local `HEAD`: `8264631`
+- Latest pushed production recovery commit message:
+  `Remove auth schema dependency from runtime`
+- Important auth flow commit just before the recovery:
+  `Fix auth contact completion and role routing`
 
 ## Current backend/auth state
 - The project is no longer using the live JSON mock flow as the main auth/data path.
@@ -21,17 +23,45 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 - The old Twilio `customCode` flow was removed because it caused:
   `Custom code not allowed`
 - Login UI was also fixed so OTP is not verified twice anymore.
+- Google login and OTP login are now treated as authentication methods only, not role selectors.
+- New enforced rule implemented in code:
+  every authenticated user must have both `phone` and `email` before reaching role selection.
+- New shared routing behavior now exists:
+  - login
+  - mandatory contact completion
+  - role choice
+  - role-specific onboarding or dashboard
+- New contact completion flow was added:
+  - Google login without phone -> collect phone + OTP verify
+  - OTP login without email -> collect email
+- Base authenticated `User` remains separate from `ArtistProfile` and `BookerProfile`.
+- Role selection now calls a real API and routes correctly:
+  - existing/completed artist -> artist dashboard
+  - incomplete/new artist -> artist onboarding
+  - existing/completed booker -> booker dashboard
+  - incomplete/new booker -> booker onboarding
 
 ## Current database state
 - Prisma is connected to one shared PostgreSQL database.
 - Seed/import was already run previously and the real DB contains starter users, artists, bookers, bookings, and payments.
 - All future real end-user data should go into this shared DB through Prisma.
+- Important production note:
+  a temporary schema change adding `User.lastAuthProvider` was pushed and caused a production runtime failure because the live DB schema did not have that column yet.
+- That schema-dependent change was rolled back in commit `8264631` so production works again without requiring an immediate migration.
 
 ## Current Vercel state
 - Project: `giggifi-website`
 - Team: `thesachinmusics-projects`
 - Production deploys are coming from GitHub branch `main`
-- Latest important successful production deployment contains commit `c7d2c04`
+- Current latest production recovery deployment:
+  - commit `8264631`
+  - deployment id `dpl_5qnTNZGcALrsqEmASjgNTLsZSaom`
+- The previously broken deployment was:
+  - commit `e91a3ef`
+  - deployment id `dpl_5fxnU4tNtTZ8hRiTsYf6XJBZvTWz`
+- Fresh Vercel runtime evidence after recovery:
+  - `GET /` returned `200`
+  - Prisma `500` errors stopped after the recovery deployment became ready
 
 ## Current live domains observed on Vercel
 - `https://giggifi.com`
@@ -44,13 +74,17 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 
 ### Google login
 - Code is wired.
-- Main remaining issue is Google OAuth configuration, not app code.
+- Main remaining issues are now configuration / final flow validation, not the core routing logic.
 - Google login must be tested only on a stable public domain, not on random temporary deployment URLs.
 - The specific error seen was:
   `redirect_uri_mismatch`
 - That happened because Google was asked to redirect to a temporary deployment URL like:
   `https://giggifi-website-n6hj6mzkn-thesachinmusics-projects.vercel.app/api/auth/callback/google`
 - Those random deployment URLs should NOT be relied on for Google setup.
+- Recent runtime logs showed Google auth requests succeeding at HTTP level:
+  - `POST /api/auth/signin/google` -> `200`
+  - `GET /api/auth/callback/google` -> `302`
+- Full end-to-end Google sign-in on the real domain still needs manual click testing.
 
 ### OTP login
 - OTP now works technically through Twilio Verify for numbers allowed by the Twilio account.
@@ -94,8 +128,32 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 - `middleware.ts`
 - `app/api/auth/send-otp/route.ts`
 - `app/api/auth/verify-otp/route.ts`
+- `app/api/auth/contact/route.ts`
+- `app/api/auth/contact/send-phone-otp/route.ts`
+- `app/api/auth/contact/verify-phone/route.ts`
+- `app/api/onboarding/role/route.ts`
+- `lib/auth-routing.ts`
+- `lib/services/auth-user-service.ts`
+- `app/api/onboarding/route.ts`
+- `app/api/onboarding/draft/route.ts`
+- `app/[[...slug]]/page.tsx`
+- `types/next-auth.d.ts`
 - `SETUP_VERCEL_DATABASE.md`
 - `.env.example`
+
+## Important production incident on 2026-04-14
+- Commit `e91a3ef` introduced the new contact-completion + role-routing logic successfully at code level.
+- That same phase also introduced a new Prisma schema field `lastAuthProvider`.
+- Local build passed, but production runtime failed with a generic application error page and digest because the production DB schema was out of sync.
+- Vercel runtime logs showed repeated `PrismaClientKnownRequestError` on:
+  - `GET /`
+  - `GET /favicon.ico`
+- Recovery action taken:
+  - removed the `lastAuthProvider` schema dependency from runtime code
+  - deleted the pending migration for that field
+  - pushed recovery commit `8264631`
+- Result:
+  production recovered and `GET /` returned `200` again.
 
 ## Important caution for future sessions
 - The user exposed `NEXTAUTH_SECRET` in chat/editor during setup.
@@ -104,11 +162,20 @@ This file is a working memory dump for Codex or any coding agent so it can conti
   - Vercel environment variables
 
 ## Best next steps from here
-1. Set Vercel `NEXTAUTH_URL` to `https://giggifi.com`
-2. Add the stable Google OAuth origins and callback URIs listed above
-3. Test Google login only from `https://giggifi.com/login`
-4. Upgrade Twilio from trial if public OTP is required
-5. After auth is fully stable, continue with payment integration readiness
+1. Manually click-test the live auth flow on `https://giggifi.com/login`
+2. Verify both paths:
+   - Google -> missing phone -> OTP verify -> role choice
+   - OTP -> missing email -> save email -> role choice
+3. Confirm no redirect loops for returning users with:
+   - completed artist profile
+   - incomplete artist onboarding
+   - completed booker profile
+   - incomplete booker onboarding
+4. Keep Vercel `NEXTAUTH_URL` set to `https://giggifi.com`
+5. Add the stable Google OAuth origins and callback URIs listed above if any are still missing
+6. Upgrade Twilio from trial if public OTP is required
+7. Only add future Prisma schema changes alongside an actual production migration plan
+8. After auth is fully stable, continue with payment integration readiness
 
 ---
 
