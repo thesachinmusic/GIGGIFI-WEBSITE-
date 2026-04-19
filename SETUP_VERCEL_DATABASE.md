@@ -21,14 +21,14 @@ Useful links:
 - Last successful deployment:
   `https://giggifi-website-c5zu3uei7-thesachinmusics-projects.vercel.app`
 - Canonical production auth domain:
-  `https://giggifi-website.vercel.app`
+  `https://giggifi.com`
 - Secondary Vercel domain you can keep during setup/testing:
   `https://giggifi-website-thesachinmusics-projects.vercel.app`
 
 Use this URL for `NEXTAUTH_URL` in production:
 
 ```env
-NEXTAUTH_URL="https://giggifi-website.vercel.app"
+NEXTAUTH_URL="https://giggifi.com"
 ```
 
 ## 2. Create the real database
@@ -129,6 +129,8 @@ Authorized JavaScript origins:
 
 ```text
 http://localhost:3000
+https://giggifi.com
+https://www.giggifi.com
 https://giggifi-website.vercel.app
 https://giggifi-website-thesachinmusics-projects.vercel.app
 ```
@@ -137,6 +139,8 @@ Authorized redirect URIs:
 
 ```text
 http://localhost:3000/api/auth/callback/google
+https://giggifi.com/api/auth/callback/google
+https://www.giggifi.com/api/auth/callback/google
 https://giggifi-website.vercel.app/api/auth/callback/google
 https://giggifi-website-thesachinmusics-projects.vercel.app/api/auth/callback/google
 ```

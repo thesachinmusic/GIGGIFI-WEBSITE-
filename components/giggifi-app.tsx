@@ -380,6 +380,7 @@ export function GiggiFiApp({
             <ContactCompletionPage
               session={session}
               authProviders={authProviders}
+              nextPath={nextQuery}
               onDone={async (path) => {
                 setToast("Contact details updated.");
                 await refreshFromServer(path);
@@ -390,6 +391,7 @@ export function GiggiFiApp({
           {routeKey === "onboarding/choice" ? (
             <ChoicePage
               session={session}
+              nextPath={nextQuery}
               onDone={async (path) => {
                 await refreshFromServer(path);
               }}
@@ -399,6 +401,7 @@ export function GiggiFiApp({
           {routeKey === "onboarding/artist" ? (
             <ArtistOnboardingPage
               phone={session?.phone ?? null}
+              nextPath={nextQuery}
               onDone={async (path) => {
                 setToast("Artist account created.");
                 await refreshFromServer(path);
@@ -411,6 +414,7 @@ export function GiggiFiApp({
               phone={session?.phone ?? null}
               email={session?.email ?? null}
               name={session?.name ?? null}
+              nextPath={nextQuery}
               onDone={async (path) => {
                 setToast("Booker account created.");
                 await refreshFromServer(path);
@@ -1404,8 +1408,10 @@ function LoginPage({
     const messages: Record<string, string> = {
       AccessDenied: "Google login was denied. Please try again.",
       Configuration: "Google login is not configured correctly yet.",
+      OAuthSignin: "Google sign-in could not be started. Please try again.",
       OAuthAccountNotLinked: "This email is already linked to another sign-in method.",
       OAuthCallback: "Google login could not be completed. Please try again.",
+      Signin: "We could not sign you in with Google. Please try again.",
       default: "Login could not be completed. Please try again.",
     };
 
@@ -1598,6 +1604,7 @@ function LoginPage({
 function ContactCompletionPage({
   session,
   authProviders,
+  nextPath,
   onDone,
 }: {
   session: SessionPayload | null;
@@ -1605,6 +1612,7 @@ function ContactCompletionPage({
     googleEnabled: boolean;
     otpMode: "twilio" | "preview" | "unavailable";
   };
+  nextPath: string | null;
   onDone: (path: string) => Promise<void>;
 }) {
   const [name, setName] = useState(session?.name ?? "");
@@ -1660,11 +1668,11 @@ function ContactCompletionPage({
     setError("");
 
     try {
-      await jsonRequest("/api/auth/contact/verify-phone", {
+      const response = await jsonRequest<{ redirect: string }>("/api/auth/contact/verify-phone", {
         method: "POST",
-        body: JSON.stringify({ phone, otp }),
+        body: JSON.stringify({ phone, otp, nextPath }),
       });
-      await onDone("/onboarding/contact");
+      await onDone(response.redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not verify phone.");
     } finally {
@@ -1677,11 +1685,11 @@ function ContactCompletionPage({
     setError("");
 
     try {
-      await jsonRequest("/api/auth/contact", {
+      const response = await jsonRequest<{ redirect: string }>("/api/auth/contact", {
         method: "POST",
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, nextPath }),
       });
-      await onDone("/onboarding/contact");
+      await onDone(response.redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save email.");
     } finally {
@@ -1822,9 +1830,11 @@ function ContactCompletionPage({
 
 function ChoicePage({
   session,
+  nextPath,
   onDone,
 }: {
   session: SessionPayload | null;
+  nextPath: string | null;
   onDone: (path: string) => Promise<void>;
 }) {
   const [loadingRole, setLoadingRole] = useState<"ARTIST" | "BOOKER" | null>(null);
@@ -1837,7 +1847,7 @@ function ChoicePage({
     try {
       const response = await jsonRequest<{ redirect: string }>("/api/onboarding/role", {
         method: "POST",
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role, nextPath }),
       });
       await onDone(response.redirect);
     } catch (err) {
@@ -1952,9 +1962,11 @@ function RoleCard({
 
 function ArtistOnboardingPage({
   phone,
+  nextPath,
   onDone,
 }: {
   phone: string | null;
+  nextPath: string | null;
   onDone: (path: string) => Promise<void>;
 }) {
   const [step, setStep] = useState(1);
@@ -2066,7 +2078,7 @@ function ArtistOnboardingPage({
         "/api/onboarding",
         {
           method: "POST",
-          body: JSON.stringify({ role: "ARTIST", payload: form }),
+          body: JSON.stringify({ role: "ARTIST", payload: form, nextPath }),
         },
       );
       await onDone(response.redirect);
@@ -2245,11 +2257,13 @@ function BookerOnboardingPage({
   phone,
   email,
   name,
+  nextPath,
   onDone,
 }: {
   phone: string | null;
   email: string | null;
   name: string | null;
+  nextPath: string | null;
   onDone: (path: string) => Promise<void>;
 }) {
   const [step, setStep] = useState(1);
@@ -2321,7 +2335,7 @@ function BookerOnboardingPage({
     try {
       const response = await jsonRequest<{ redirect: string }>("/api/onboarding", {
         method: "POST",
-        body: JSON.stringify({ role: "BOOKER", payload: form }),
+        body: JSON.stringify({ role: "BOOKER", payload: form, nextPath }),
       });
       await onDone(response.redirect);
     } catch (err) {

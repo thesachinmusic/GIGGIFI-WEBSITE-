@@ -18,8 +18,67 @@ export function buildDashboardPath(role: AppRole | null | undefined) {
   return "/onboarding/choice";
 }
 
-export function buildRoleOnboardingPath(role: Exclude<AppRole, "ADMIN">) {
-  return role === "ARTIST" ? "/onboarding/artist" : "/onboarding/booker";
+function sanitizeNextPath(nextPath?: string | null) {
+  if (!nextPath) return null;
+  if (!nextPath.startsWith("/")) return null;
+  if (nextPath.startsWith("//")) return null;
+  if (
+    nextPath === "/login" ||
+    nextPath.startsWith("/login?") ||
+    nextPath.startsWith("/onboarding") ||
+    nextPath.startsWith("/api")
+  ) {
+    return null;
+  }
+
+  return nextPath;
+}
+
+function appendNextPath(path: string, nextPath?: string | null) {
+  const safeNextPath = sanitizeNextPath(nextPath);
+  if (!safeNextPath || safeNextPath === path) {
+    return path;
+  }
+
+  const url = new URL(path, "https://giggifi.local");
+  url.searchParams.set("next", safeNextPath);
+  return `${url.pathname}${url.search}`;
+}
+
+function canRoleContinueToPath(
+  role: AppRole | null | undefined,
+  nextPath?: string | null,
+) {
+  const safeNextPath = sanitizeNextPath(nextPath);
+  if (!safeNextPath || !role) {
+    return false;
+  }
+
+  if (role === "ADMIN") {
+    return safeNextPath.startsWith("/admin");
+  }
+
+  if (role === "ARTIST") {
+    return safeNextPath.startsWith("/artist") || safeNextPath.startsWith("/booking");
+  }
+
+  return (
+    safeNextPath.startsWith("/booker") ||
+    safeNextPath.startsWith("/cart") ||
+    safeNextPath.startsWith("/checkout") ||
+    safeNextPath.startsWith("/payment") ||
+    safeNextPath.startsWith("/booking")
+  );
+}
+
+export function buildRoleOnboardingPath(
+  role: Exclude<AppRole, "ADMIN">,
+  nextPath?: string | null,
+) {
+  return appendNextPath(
+    role === "ARTIST" ? "/onboarding/artist" : "/onboarding/booker",
+    nextPath,
+  );
 }
 
 export function hasCompletedRoleProfile(input: {
@@ -44,9 +103,13 @@ export function getMissingContactFields(input: Pick<AuthRoutingState, "phone" | 
   };
 }
 
-export function buildContactCompletionPath(input: Pick<AuthRoutingState, "phone" | "email">) {
+export function buildContactCompletionPath(
+  input: Pick<AuthRoutingState, "phone" | "email">,
+  nextPath?: string | null,
+) {
   const params = new URLSearchParams();
   const missing = getMissingContactFields(input);
+  const safeNextPath = sanitizeNextPath(nextPath);
 
   if (missing.phone) {
     params.append("missing", "phone");
@@ -54,6 +117,10 @@ export function buildContactCompletionPath(input: Pick<AuthRoutingState, "phone"
 
   if (missing.email) {
     params.append("missing", "email");
+  }
+
+  if (safeNextPath) {
+    params.set("next", safeNextPath);
   }
 
   const query = params.toString();
@@ -86,32 +153,64 @@ function inferIncompleteRole(input: AuthRoutingState): Exclude<AppRole, "ADMIN">
 export function resolveRoleSelectionRedirect(
   role: Exclude<AppRole, "ADMIN">,
   input: AuthRoutingState,
+  nextPath?: string | null,
 ) {
+  const roleAwareNextPath = canRoleContinueToPath(role, nextPath) ? nextPath : null;
+
   if (!hasRequiredContactDetails(input)) {
-    return buildContactCompletionPath(input);
+    return buildContactCompletionPath(input, roleAwareNextPath);
   }
 
   if (role === "ARTIST") {
-    return input.hasArtistProfile ? buildDashboardPath("ARTIST") : buildRoleOnboardingPath("ARTIST");
+    return input.hasArtistProfile
+      ? resolveAuthenticatedAppPath(
+          {
+            ...input,
+            role: "ARTIST",
+            hasArtistProfile: true,
+          },
+          roleAwareNextPath,
+        )
+      : buildRoleOnboardingPath("ARTIST", roleAwareNextPath);
   }
 
-  return input.hasBookerProfile ? buildDashboardPath("BOOKER") : buildRoleOnboardingPath("BOOKER");
+  return input.hasBookerProfile
+    ? resolveAuthenticatedAppPath(
+        {
+          ...input,
+          role: "BOOKER",
+          hasBookerProfile: true,
+        },
+        roleAwareNextPath,
+      )
+    : buildRoleOnboardingPath("BOOKER", roleAwareNextPath);
 }
 
-export function resolveAuthenticatedAppPath(input: AuthRoutingState) {
+export function resolveAuthenticatedAppPath(
+  input: AuthRoutingState,
+  nextPath?: string | null,
+) {
+  const safeNextPath = sanitizeNextPath(nextPath);
+
   if (!hasRequiredContactDetails(input)) {
-    return buildContactCompletionPath(input);
+    return buildContactCompletionPath(input, safeNextPath);
   }
 
   const completedRole = inferCompletedRole(input);
   if (completedRole) {
+    if (canRoleContinueToPath(completedRole, safeNextPath)) {
+      return safeNextPath!;
+    }
     return buildDashboardPath(completedRole);
   }
 
   const incompleteRole = inferIncompleteRole(input);
   if (incompleteRole && input.onboardingState === "PROFILE_IN_PROGRESS") {
-    return buildRoleOnboardingPath(incompleteRole);
+    return buildRoleOnboardingPath(
+      incompleteRole,
+      canRoleContinueToPath(incompleteRole, safeNextPath) ? safeNextPath : null,
+    );
   }
 
-  return "/onboarding/choice";
+  return appendNextPath("/onboarding/choice", safeNextPath);
 }

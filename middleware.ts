@@ -49,6 +49,11 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
+  const urlSearchParams = new URLSearchParams(request.nextUrl.search);
+  const requestedNextPath = urlSearchParams.get("next");
+  urlSearchParams.delete("next");
+  const currentPathWithSearch = `${pathname}${urlSearchParams.toString() ? `?${urlSearchParams.toString()}` : ""}`;
+  const continuationPath = requestedNextPath ?? currentPathWithSearch;
 
   const hasCompletedProfile = hasCompletedRoleProfile({
     role: (token?.role as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
@@ -67,7 +72,7 @@ export async function middleware(request: NextRequest) {
 
     if (!token?.sub) {
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("next", pathname);
+      loginUrl.searchParams.set("next", currentPathWithSearch);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -77,29 +82,66 @@ export async function middleware(request: NextRequest) {
           buildContactCompletionPath({
             phone: (token?.phone as string | null | undefined) ?? null,
             email: (token?.email as string | null | undefined) ?? null,
-          }),
+          }, continuationPath),
           request.url,
         ),
       );
     }
 
     if (!hasCompletedProfile && token.role !== "ADMIN") {
-      return NextResponse.redirect(new URL(dashboardForToken(token), request.url));
+      return NextResponse.redirect(
+        new URL(resolveAuthenticatedAppPath({
+          role: (token?.role as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+          phone: (token?.phone as string | null | undefined) ?? null,
+          email: (token?.email as string | null | undefined) ?? null,
+          onboardingState: (token?.onboardingState as
+            | "ROLE_SELECTION"
+            | "PROFILE_IN_PROGRESS"
+            | "COMPLETE"
+            | null
+            | undefined) ?? null,
+          onboardingDraftRole:
+            (token?.onboardingDraftRole as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+          hasArtistProfile: Boolean(token?.hasArtistProfile),
+          hasBookerProfile: Boolean(token?.hasBookerProfile),
+        }, continuationPath), request.url),
+      );
     }
 
     if (token.role !== item.role) {
-      return NextResponse.redirect(new URL(dashboardForToken(token), request.url));
+      return NextResponse.redirect(
+        new URL(dashboardForToken(token), request.url),
+      );
     }
   }
 
   if (pathname === "/login" && token?.sub) {
-    return NextResponse.redirect(new URL(dashboardForToken(token), request.url));
+    return NextResponse.redirect(
+      new URL(
+        resolveAuthenticatedAppPath({
+          role: (token?.role as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+          phone: (token?.phone as string | null | undefined) ?? null,
+          email: (token?.email as string | null | undefined) ?? null,
+          onboardingState: (token?.onboardingState as
+            | "ROLE_SELECTION"
+            | "PROFILE_IN_PROGRESS"
+            | "COMPLETE"
+            | null
+            | undefined) ?? null,
+          onboardingDraftRole:
+            (token?.onboardingDraftRole as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+          hasArtistProfile: Boolean(token?.hasArtistProfile),
+          hasBookerProfile: Boolean(token?.hasBookerProfile),
+        }, continuationPath),
+        request.url,
+      ),
+    );
   }
 
   if (pathname.startsWith("/onboarding")) {
     if (!token?.sub) {
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("next", pathname);
+      loginUrl.searchParams.set("next", currentPathWithSearch);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -113,14 +155,33 @@ export async function middleware(request: NextRequest) {
           buildContactCompletionPath({
             phone: (token?.phone as string | null | undefined) ?? null,
             email: (token?.email as string | null | undefined) ?? null,
-          }),
+          }, continuationPath),
           request.url,
         ),
       );
     }
 
     if (pathname === "/onboarding/contact") {
-      return NextResponse.redirect(new URL(dashboardForToken(token), request.url));
+      return NextResponse.redirect(
+        new URL(
+          resolveAuthenticatedAppPath({
+            role: (token?.role as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+            phone: (token?.phone as string | null | undefined) ?? null,
+            email: (token?.email as string | null | undefined) ?? null,
+            onboardingState: (token?.onboardingState as
+              | "ROLE_SELECTION"
+              | "PROFILE_IN_PROGRESS"
+              | "COMPLETE"
+              | null
+              | undefined) ?? null,
+            onboardingDraftRole:
+              (token?.onboardingDraftRole as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+            hasArtistProfile: Boolean(token?.hasArtistProfile),
+            hasBookerProfile: Boolean(token?.hasBookerProfile),
+          }, continuationPath),
+          request.url,
+        ),
+      );
     }
 
     if (
@@ -129,7 +190,26 @@ export async function middleware(request: NextRequest) {
         pathname === "/onboarding/artist" ||
         pathname === "/onboarding/booker")
     ) {
-      return NextResponse.redirect(new URL(dashboardForToken(token), request.url));
+      return NextResponse.redirect(
+        new URL(
+          resolveAuthenticatedAppPath({
+            role: (token?.role as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+            phone: (token?.phone as string | null | undefined) ?? null,
+            email: (token?.email as string | null | undefined) ?? null,
+            onboardingState: (token?.onboardingState as
+              | "ROLE_SELECTION"
+              | "PROFILE_IN_PROGRESS"
+              | "COMPLETE"
+              | null
+              | undefined) ?? null,
+            onboardingDraftRole:
+              (token?.onboardingDraftRole as "ARTIST" | "BOOKER" | "ADMIN" | null | undefined) ?? null,
+            hasArtistProfile: Boolean(token?.hasArtistProfile),
+            hasBookerProfile: Boolean(token?.hasBookerProfile),
+          }, continuationPath),
+          request.url,
+        ),
+      );
     }
   }
 

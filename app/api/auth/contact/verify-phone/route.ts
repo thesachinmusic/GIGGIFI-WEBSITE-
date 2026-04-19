@@ -12,6 +12,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
+  const nextPath = typeof body?.nextPath === "string" ? body.nextPath : null;
   const parsed = verifyOtpSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
         onboardingDraftRole: user.onboardingDraft?.role ?? null,
         hasArtistProfile: Boolean(user.artistProfile),
         hasBookerProfile: Boolean(user.bookerProfile),
-      }),
+      }, nextPath),
     });
   } catch (error) {
     return NextResponse.json(

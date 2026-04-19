@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildDashboardPath, hasRequiredContactDetails } from "@/lib/auth-routing";
+import { hasRequiredContactDetails, resolveAuthenticatedAppPath } from "@/lib/auth-routing";
 import { getServerAuthSession } from "@/lib/auth";
 import { getAuthSessionUser } from "@/lib/services/auth-user-service";
 import {
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const role = body.role as "ARTIST" | "BOOKER";
+  const nextPath = typeof body?.nextPath === "string" ? body.nextPath : null;
 
   if (role === "ARTIST") {
     const parsed = artistOnboardingSchema.safeParse(body.payload);
@@ -45,7 +46,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      redirect: buildDashboardPath("ARTIST"),
+      redirect: resolveAuthenticatedAppPath(
+        {
+          role: result.user.role,
+          phone: result.user.phone,
+          email: result.user.email,
+          onboardingState: result.user.onboardingState,
+          hasArtistProfile: true,
+          hasBookerProfile: false,
+        },
+        nextPath,
+      ),
       artistId: result.artist.id,
       profilePath: `/booker/artist/${result.artist.id}`,
     });
@@ -61,13 +72,23 @@ export async function POST(request: Request) {
     );
   }
 
-  await completeBookerOnboarding(session.user.id, {
+  const result = await completeBookerOnboarding(session.user.id, {
     ...body.payload,
     ...parsed.data,
   });
 
   return NextResponse.json({
     success: true,
-    redirect: buildDashboardPath("BOOKER"),
+    redirect: resolveAuthenticatedAppPath(
+      {
+        role: result.user.role,
+        phone: result.user.phone,
+        email: result.user.email,
+        onboardingState: result.user.onboardingState,
+        hasArtistProfile: false,
+        hasBookerProfile: true,
+      },
+      nextPath,
+    ),
   });
 }

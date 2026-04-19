@@ -98,40 +98,10 @@ export const authOptions: NextAuthOptions = {
   providers,
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (!user.id) {
-        return false;
-      }
-
-      const updates: Prisma.UserUpdateInput = {
-        lastLoginAt: new Date(),
-      };
-
-      if (account?.provider === "google") {
-        const profileRecord =
-          profile && typeof profile === "object" ? (profile as Record<string, unknown>) : null;
-        updates.status = UserStatus.ACTIVE;
-        updates.emailVerified = new Date();
-        updates.email = user.email ?? undefined;
-        updates.name =
-          user.name ??
-          (typeof profile?.name === "string" ? profile.name : undefined) ??
-          undefined;
-        updates.image =
-          user.image ??
-          (profileRecord && typeof profileRecord.picture === "string"
-            ? profileRecord.picture
-            : undefined) ??
-          undefined;
-      }
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: updates,
-      });
-
+    async signIn() {
       return true;
     },
     async jwt({ token, user }) {
@@ -177,6 +147,40 @@ export const authOptions: NextAuthOptions = {
       session.user.hasBookerProfile = Boolean(token.hasBookerProfile);
 
       return session;
+    },
+  },
+  events: {
+    async signIn({ user, account, profile }) {
+      if (!user?.id) {
+        return;
+      }
+
+      const updates: Prisma.UserUpdateInput = {
+        lastLoginAt: new Date(),
+      };
+
+      if (account?.provider === "google") {
+        const profileRecord =
+          profile && typeof profile === "object" ? (profile as Record<string, unknown>) : null;
+        updates.status = UserStatus.ACTIVE;
+        updates.emailVerified = new Date();
+        updates.email = user.email ?? undefined;
+        updates.name =
+          user.name ??
+          (typeof profile?.name === "string" ? profile.name : undefined) ??
+          undefined;
+        updates.image =
+          user.image ??
+          (profileRecord && typeof profileRecord.picture === "string"
+            ? profileRecord.picture
+            : undefined) ??
+          undefined;
+      }
+
+      await prisma.user.updateMany({
+        where: { id: user.id },
+        data: updates,
+      });
     },
   },
 };
