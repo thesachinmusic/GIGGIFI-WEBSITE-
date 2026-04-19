@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import {
@@ -29,19 +27,16 @@ import {
   Guitar,
   Laugh,
   Lock,
-  MapPin,
   Menu,
   Mic2,
   Music2,
   PartyPopper,
-  Play,
   Search,
   ShieldCheck,
   ShoppingCart,
   Sparkles,
   Star,
   Ticket,
-  Upload,
   Wallet,
   X,
 } from "lucide-react";
@@ -49,12 +44,17 @@ import {
   artistMenus,
   bookingStatusLabels,
   calculatePricing,
+  celebrityShowcase,
   clients,
+  cityShowcase,
+  founderProfile,
   formatINR,
   formatIST,
   gradientClass,
   occasions,
+  socialShowcase,
   services,
+  trustPillars,
   testimonials,
   type ArtistRecord,
   type BookingRecord,
@@ -86,6 +86,15 @@ type Props = {
     otpMode: "twilio" | "preview" | "unavailable";
   };
 };
+
+type CartDraft = {
+  artistIds: string[];
+  occasion?: string;
+  city?: string;
+};
+
+const guestCartStorageKey = "giggifi-guest-cart";
+const serviceRouteKeys = services.map((service) => service[1]);
 
 const cityOptions = ["Mumbai", "Pune", "Bengaluru", "Delhi"];
 const languageOptions = [
@@ -138,6 +147,18 @@ function pageName(slug: string[]) {
   const joined = slug.join("/");
   if (!joined) return "Home";
   const map: Record<string, string> = {
+    services: "Services",
+    artists: "Artists",
+    verified: "Verified Artists",
+    cities: "Cities Covered",
+    celebrity: "Celebrity",
+    social: "Social",
+    weddings: "Luxury Weddings",
+    clubs: "Nightclubs & Lounges",
+    corporate: "Corporate Events",
+    college: "Colleges & Festivals",
+    hotels: "Hotels & Resorts",
+    private: "Private Parties",
     login: "Login",
     "onboarding/contact": "Complete Contact",
     "onboarding/choice": "Choose Role",
@@ -212,6 +233,7 @@ export function GiggiFiApp({
   const [toast, setToast] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [downloadPopupDismissed, setDownloadPopupDismissed] = useState(true);
+  const [guestCart, setGuestCart] = useState<CartDraft>({ artistIds: [] });
 
   useEffect(() => {
     setDb(initialDb);
@@ -221,7 +243,30 @@ export function GiggiFiApp({
   useEffect(() => {
     const dismissed = window.localStorage.getItem("giggifi-download-popup");
     setDownloadPopupDismissed(Boolean(dismissed));
+    const storedCart = window.localStorage.getItem(guestCartStorageKey);
+    if (!storedCart) return;
+    try {
+      const parsed = JSON.parse(storedCart) as CartDraft;
+      if (Array.isArray(parsed.artistIds)) {
+        setGuestCart({
+          artistIds: parsed.artistIds,
+          occasion: parsed.occasion,
+          city: parsed.city,
+        });
+      }
+    } catch {
+      window.localStorage.removeItem(guestCartStorageKey);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!guestCart.artistIds.length) {
+      window.localStorage.removeItem(guestCartStorageKey);
+      return;
+    }
+
+    window.localStorage.setItem(guestCartStorageKey, JSON.stringify(guestCart));
+  }, [guestCart]);
 
   useEffect(() => {
     if (!toast) return;
@@ -230,9 +275,6 @@ export function GiggiFiApp({
   }, [toast]);
 
   const routeKey = slug.join("/");
-  const viewerUser = session
-    ? db.users.find((item) => item.id === session.userId)
-    : undefined;
   const viewerBooker = session
     ? db.bookers.find((item) => item.userId === session.userId)
     : undefined;
@@ -242,6 +284,13 @@ export function GiggiFiApp({
   const viewerCart = viewerBooker
     ? db.carts.find((item) => item.bookerId === viewerBooker.id)
     : undefined;
+  const effectiveCart = viewerCart ?? (guestCart.artistIds.length ? {
+    bookerId: "guest-booker",
+    artistIds: guestCart.artistIds,
+    occasion: guestCart.occasion,
+    city: guestCart.city,
+    updatedAt: new Date().toISOString(),
+  } : undefined);
   const nextQuery = searchParams.get("next");
   const authError = searchParams.get("error");
 
@@ -258,7 +307,71 @@ export function GiggiFiApp({
     await refreshFromServer("/");
   }
 
+  useEffect(() => {
+    if (
+      !session?.userId ||
+      session.role !== "BOOKER" ||
+      !session.hasBookerProfile ||
+      !guestCart.artistIds.length
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        for (const artistId of guestCart.artistIds) {
+          await jsonRequest("/api/cart", {
+            method: "POST",
+            body: JSON.stringify({
+              artistId,
+              action: "add",
+              occasion: guestCart.occasion,
+              city: guestCart.city,
+            }),
+          });
+        }
+
+        if (cancelled) return;
+
+        setGuestCart({ artistIds: [] });
+        setToast("Saved artists restored to your cart.");
+        await refreshFromServer("/cart");
+      } catch (error) {
+        if (cancelled) return;
+        setToast(error instanceof Error ? error.message : "Could not restore your saved cart.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [guestCart, session?.hasBookerProfile, session?.role, session?.userId]);
+
   async function addToCart(artistId: string, occasion?: string, city?: string) {
+    if (!session?.userId) {
+      setGuestCart((current) => ({
+        artistIds: Array.from(new Set([...current.artistIds, artistId])),
+        occasion: occasion ?? current.occasion ?? "Wedding",
+        city: city ?? current.city ?? "Mumbai",
+      }));
+      setToast("Artist saved. Login as a booker to continue checkout.");
+      go("/login?next=/cart");
+      return;
+    }
+
+    if (session.role !== "BOOKER" || !session.hasBookerProfile) {
+      setGuestCart((current) => ({
+        artistIds: Array.from(new Set([...current.artistIds, artistId])),
+        occasion: occasion ?? current.occasion ?? "Wedding",
+        city: city ?? current.city ?? "Mumbai",
+      }));
+      setToast("Choose the booker flow to continue with cart and payment.");
+      go("/onboarding/choice?next=/cart");
+      return;
+    }
+
     try {
       await jsonRequest("/api/cart", {
         method: "POST",
@@ -272,6 +385,15 @@ export function GiggiFiApp({
   }
 
   async function removeFromCart(artistId: string) {
+    if (!session?.userId || session.role !== "BOOKER" || !session.hasBookerProfile) {
+      setGuestCart((current) => ({
+        ...current,
+        artistIds: current.artistIds.filter((item) => item !== artistId),
+      }));
+      setToast("Removed from saved cart.");
+      return;
+    }
+
     try {
       await jsonRequest("/api/cart", {
         method: "POST",
@@ -286,6 +408,7 @@ export function GiggiFiApp({
 
   function go(path: string) {
     startTransition(() => {
+      setMobileMenuOpen(false);
       router.push(path);
     });
   }
@@ -295,7 +418,8 @@ export function GiggiFiApp({
     pathname !== "/" &&
     pathname !== "/login" &&
     pathname !== "/onboarding/contact" &&
-    pathname !== "/onboarding/choice";
+    pathname !== "/onboarding/choice" &&
+    !mobileMenuOpen;
   const selectedArtist = slug[0] === "booker" && slug[1] === "artist" ? db.artists.find((item) => item.id === slug[2]) : undefined;
   const selectedBooking = slug[1] ? db.bookings.find((item) => item.id === slug[1]) : undefined;
   const selectedBookingArtist = selectedBooking
@@ -308,14 +432,10 @@ export function GiggiFiApp({
     ? db.bookings.filter((item) => item.artistId === viewerArtist.id)
     : [];
 
-  const heroArtistRows = cityOptions.flatMap((city) =>
-    db.artists.filter((artist) => artist.city === city).slice(0, 1),
-  );
-
   return (
     <div className="min-h-screen bg-[#06020b] text-white">
       <SiteHeader
-        cartCount={viewerCart?.artistIds.length ?? 0}
+        cartCount={effectiveCart?.artistIds.length ?? 0}
         isArtistConsole={isArtistConsole}
         onNavigate={go}
         onLogout={handleLogout}
@@ -328,7 +448,7 @@ export function GiggiFiApp({
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
             <button
               className="flex items-center gap-2 text-sm text-white/70 transition hover:text-white"
-              onClick={() => router.back()}
+              onClick={() => (window.history.length > 1 ? router.back() : go("/"))}
             >
               <ArrowLeft size={16} />
               Back
@@ -349,18 +469,47 @@ export function GiggiFiApp({
           className="mx-auto max-w-7xl px-4 pb-24 pt-6 md:px-6 md:pt-8"
           {...pageTransitions}
         >
-          {routeKey === "" ||
-          routeKey === "services" ||
-          routeKey === "artists" ||
-          routeKey === "celebrity" ||
-          routeKey === "social" ? (
+          {routeKey === "" ? (
             <LandingPage
               artists={db.artists}
               bookings={db.bookings}
               onAddToCart={addToCart}
               onNavigate={go}
-              quickRows={heroArtistRows.slice(0, 3)}
+              quickRows={db.artists}
             />
+          ) : null}
+
+          {routeKey === "services" ? (
+            <ServicesPage onNavigate={go} />
+          ) : null}
+
+          {serviceRouteKeys.includes(routeKey) ? (
+            <ServiceDetailPage
+              service={services.find((item) => item[1] === routeKey)!}
+              artists={db.artists}
+              onAddToCart={addToCart}
+              onNavigate={go}
+            />
+          ) : null}
+
+          {routeKey === "artists" ? (
+            <DiscoverPage artists={db.artists} onAddToCart={addToCart} onNavigate={go} />
+          ) : null}
+
+          {routeKey === "verified" ? (
+            <VerifiedArtistsPage artists={db.artists} onAddToCart={addToCart} onNavigate={go} />
+          ) : null}
+
+          {routeKey === "cities" ? (
+            <CitiesCoveredPage onNavigate={go} />
+          ) : null}
+
+          {routeKey === "celebrity" ? (
+            <CelebrityPage artists={db.artists} onNavigate={go} />
+          ) : null}
+
+          {routeKey === "social" ? (
+            <SocialPage onNavigate={go} />
           ) : null}
 
           {routeKey === "login" ? (
@@ -618,16 +767,17 @@ export function GiggiFiApp({
           {routeKey === "cart" ? (
             <CartPage
               artists={db.artists.filter((artist) =>
-                viewerCart?.artistIds.includes(artist.id),
+                effectiveCart?.artistIds.includes(artist.id),
               )}
-              cart={viewerCart}
+              cart={effectiveCart}
               onRemove={removeFromCart}
               onNavigate={go}
+              session={session}
             />
           ) : null}
 
           {routeKey === "payment" ? (
-            <PaymentPage cart={viewerCart} artists={db.artists} />
+            <PaymentPage cart={effectiveCart} artists={db.artists} onNavigate={go} session={session} />
           ) : null}
 
           {routeKey.startsWith("booker/") &&
@@ -697,6 +847,42 @@ export function GiggiFiApp({
         </motion.main>
       </AnimatePresence>
 
+      <footer className="border-t border-white/10 bg-[#05010a]">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-[1.2fr_0.8fr_0.8fr] md:px-6">
+          <div>
+            <Wordmark />
+            <p className="mt-4 max-w-md text-sm text-white/60">
+              GiggiFi is a premium dark entertainment marketplace built around verified artists, escrow-based payments, and a trust-first booking journey for both bookers and performers.
+            </p>
+          </div>
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-white/40">Explore</div>
+            <div className="mt-4 space-y-3 text-sm text-white/65">
+              {[
+                ["Home", "/"],
+                ["Services", "/services"],
+                ["Artists", "/artists"],
+                ["Verified Artists", "/verified"],
+                ["Cities Covered", "/cities"],
+              ].map(([label, path]) => (
+                <button key={label} onClick={() => go(path)} className="block hover:text-white">
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-white/40">Trust Model</div>
+            <div className="mt-4 space-y-3 text-sm text-white/65">
+              <div>Client amount plus tax is collected upfront.</div>
+              <div>Funds remain in escrow until the event is complete.</div>
+              <div>Artist payout releases after commission and tax deduction.</div>
+              <div>Cancellation, reliability, and disputes stay tracked inside GiggiFi.</div>
+            </div>
+          </div>
+        </div>
+      </footer>
+
       {downloadPopupDismissed ? null : (
         <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-[1.8rem] border border-white/10 bg-[#0f0918]/95 p-5 shadow-glow backdrop-blur-xl">
           <button
@@ -710,13 +896,19 @@ export function GiggiFiApp({
           </button>
           <div className="mb-2 text-lg font-black">Download GiggiFi App</div>
           <div className="mb-4 text-sm text-white/70">
-            Mobile apps are not live yet. We’ll announce them here once downloads are available.
+            Download links are opening soon. Join the waitlist from iOS or Android and we&apos;ll notify you first.
           </div>
           <div className="flex gap-3">
-            <button disabled className={`${gradientClass} h-12 rounded-2xl px-5 font-semibold text-black opacity-60`}>
+            <button
+              className={`${gradientClass} h-12 rounded-2xl px-5 font-semibold text-black`}
+              onClick={() => setToast("iOS waitlist opening soon.")}
+            >
               iOS App
             </button>
-            <button disabled className="h-12 rounded-2xl border border-white/15 bg-white/5 px-5 text-white opacity-60">
+            <button
+              className="h-12 rounded-2xl border border-white/15 bg-white/5 px-5 text-white"
+              onClick={() => setToast("Android waitlist opening soon.")}
+            >
               Android App
             </button>
           </div>
@@ -750,7 +942,7 @@ function SiteHeader({
   session: SessionPayload | null;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#06020b]/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#06020b]/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
         <button onClick={() => onNavigate(isArtistConsole ? "/artist/dashboard" : "/")}>
           <Wordmark />
@@ -767,20 +959,20 @@ function SiteHeader({
           </div>
         ) : (
           <nav className="hidden items-center gap-6 text-sm text-white/80 md:flex">
-            <button onClick={() => onNavigate("/")}>Home</button>
+            <button onClick={() => onNavigate("/")} className="transition hover:text-white">Home</button>
             <DropdownNav label="Services">
               {services.map((item) => (
                 <button
                   key={item[0]}
                   className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/5 hover:text-white"
-                  onClick={() => onNavigate("/")}
+                  onClick={() => onNavigate(`/${item[1]}`)}
                 >
                   <span>{item[0]}</span>
                   <ArrowRight size={16} />
                 </button>
               ))}
             </DropdownNav>
-            <button onClick={() => onNavigate("/booker/dashboard")}>Booker</button>
+            <button onClick={() => onNavigate("/booker/dashboard")} className="transition hover:text-white">Booker</button>
             <DropdownNav label="Artists">
               {artistMenus.map((item) => (
                 <button
@@ -795,8 +987,8 @@ function SiteHeader({
                 </button>
               ))}
             </DropdownNav>
-            <button onClick={() => onNavigate("/")}>Celebrity</button>
-            <button onClick={() => onNavigate("/")}>Social</button>
+            <button onClick={() => onNavigate("/celebrity")} className="transition hover:text-white">Celebrity</button>
+            <button onClick={() => onNavigate("/social")} className="transition hover:text-white">Social</button>
           </nav>
         )}
 
@@ -866,16 +1058,29 @@ function SiteHeader({
         <div className="border-t border-white/10 bg-[#0f0918]/95 p-4 md:hidden">
           <div className="space-y-3">
             <button className="block w-full text-left" onClick={() => onNavigate("/")}>Home</button>
+            <button className="block w-full text-left" onClick={() => onNavigate("/services")}>Services</button>
             {services.map((item) => (
-              <button key={item[1]} className="block w-full text-left text-white/70" onClick={() => onNavigate("/")}>
+              <button key={item[1]} className="block w-full text-left pl-4 text-white/70" onClick={() => onNavigate(`/${item[1]}`)}>
                 {item[0]}
               </button>
             ))}
+            <button className="block w-full text-left" onClick={() => onNavigate("/booker/dashboard")}>Booker</button>
+            <button className="block w-full text-left" onClick={() => onNavigate("/artists")}>Artists</button>
             {artistMenus.map((item) => (
-              <button key={item[1]} className="block w-full text-left text-white/70" onClick={() => onNavigate("/booker/discover")}>
+              <button key={item[1]} className="block w-full text-left pl-4 text-white/70" onClick={() => onNavigate("/booker/discover")}>
                 {item[0]}
               </button>
             ))}
+            <button className="block w-full text-left" onClick={() => onNavigate("/celebrity")}>Celebrity</button>
+            <button className="block w-full text-left" onClick={() => onNavigate("/social")}>Social</button>
+            <button className="block w-full text-left" onClick={() => onNavigate("/verified")}>Verified Artists</button>
+            <button className="block w-full text-left" onClick={() => onNavigate("/cities")}>Cities Covered</button>
+            <button className="block w-full text-left" onClick={() => onNavigate("/cart")}>Cart ({cartCount})</button>
+            {!session ? (
+              <button className="block w-full text-left" onClick={() => onNavigate("/login")}>
+                Login / Dashboard
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -910,13 +1115,15 @@ function NotFoundPanel({
 
 function DropdownNav({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="group relative">
-      <button className="flex items-center gap-1">
+    <div className="group relative -mb-6 pb-6">
+      <button className="flex items-center gap-1 transition hover:text-white">
         {label}
         <ChevronDown size={14} />
       </button>
-      <div className="pointer-events-none absolute left-0 top-full z-20 mt-3 w-80 rounded-[1.6rem] border border-white/10 bg-[#0f0918]/95 p-3 opacity-0 shadow-glow transition group-hover:pointer-events-auto group-hover:opacity-100">
-        {children}
+      <div className="pointer-events-none absolute left-0 top-full z-20 w-80 pt-3 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100">
+        <div className="rounded-[1.6rem] border border-white/10 bg-[#0f0918]/95 p-3 shadow-glow backdrop-blur-xl">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -925,14 +1132,14 @@ function DropdownNav({ label, children }: { label: string; children: React.React
 function Wordmark() {
   return (
     <div className="flex items-center gap-3">
-      <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl shadow-[0_0_30px_rgba(255,94,176,0.22)] bg-[linear-gradient(135deg,#a53eff,#ff44b7,#ffb13e)]">
-        <span className="text-lg font-black text-white">G</span>
+      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-[0_0_30px_rgba(255,94,176,0.18)]">
+        <img src="/brand/giggifi-logo.png" alt="GiggiFi logo" className="h-10 w-10 object-contain" />
       </div>
       <div className="text-left">
         <div className="bg-[linear-gradient(135deg,#a53eff,#ff44b7,#ffb13e)] bg-clip-text text-3xl font-black tracking-tight text-transparent">
           GiggiFi
         </div>
-        <div className="text-xs text-white/70">Where real talent meets real opportunities</div>
+        <div className="text-xs text-white/70">Escrow-first entertainment marketplace</div>
       </div>
     </div>
   );
@@ -996,10 +1203,17 @@ function LandingPage({
 }) {
   return (
     <div className="space-y-10 md:space-y-14">
-      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+      <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <div className="space-y-8 pt-4">
-          <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-            India&apos;s premium entertainer booking platform
+          <div className="flex items-center gap-4">
+            <img
+              src="/brand/giggifi-logo.png"
+              alt="GiggiFi"
+              className="h-16 w-16 rounded-[1.6rem] border border-white/10 bg-white/5 p-2 object-contain shadow-glow"
+            />
+            <div className="text-sm uppercase tracking-[0.3em] text-white/50">
+              Premium live entertainment marketplace
+            </div>
           </div>
           <motion.h1
             initial={{ opacity: 0, y: 18 }}
@@ -1007,10 +1221,12 @@ function LandingPage({
             transition={{ duration: 0.4 }}
             className="max-w-4xl text-5xl font-black leading-[0.98] tracking-tight md:text-7xl"
           >
-            Book artists. Hassle-free payments. Real talent. Real opportunities.
+            Discover verified artists, lock bookings in escrow, and run premium events with confidence.
           </motion.h1>
           <p className="max-w-2xl text-lg leading-8 text-white/72">
-            Book singers, bands, dancers, comics, circus acts, premium entertainers and celebrity talent.
+            GiggiFi pairs premium artist discovery with trust-first booking logic: verified talent,
+            transparent platform fees, escrow-held payments, and artist payouts released only after
+            successful event completion.
           </p>
           <div className="flex flex-wrap gap-4">
             <button
@@ -1020,28 +1236,33 @@ function LandingPage({
               Explore Artists <ArrowRight size={18} />
             </button>
             <button
-              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={() => onNavigate("/booker/dashboard")}
               className="flex h-12 items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-6 text-white"
             >
-              <Play size={16} />
-              See How It Works
+              <ShieldCheck size={16} />
+              Open Booker Journey
             </button>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <StatCard title="Verified Artists" value="10,000+" note="Explore premium talent" onClick={() => onNavigate("/booker/discover")} />
-            <StatCard title="Cities Covered" value="25+" note="Mumbai to Kolkata" onClick={() => onNavigate("/booker/discover")} />
-            <StatCard title="Premium Artists Joined" value="300+" note="Auditioned and approved" onClick={() => onNavigate("/artist/dashboard")} />
+            <StatCard title="Verified Artists" value="10,000+" note="Open verified roster" onClick={() => onNavigate("/verified")} />
+            <StatCard title="Cities Covered" value="25+" note="Explore city-led browsing" onClick={() => onNavigate("/cities")} />
+            <StatCard title="Premium Artists Joined" value="300+" note="Luxury and celebrity discovery" onClick={() => onNavigate("/celebrity")} />
           </div>
         </div>
 
         <div className="space-y-6">
           <GlassCard className="relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,179,64,0.22),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(165,62,255,0.18),transparent_35%)]" />
-            <div className="relative">
+            <div className="relative space-y-5">
               <Wordmark />
-              <p className="mt-4 max-w-md text-white/70">
-                Premium discovery, protected payments, and artist-first tools built for the Indian live entertainment market.
-              </p>
+              <div className="grid gap-3">
+                {trustPillars.slice(0, 3).map((item) => (
+                  <div key={item.title} className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4">
+                    <div className="font-semibold text-white">{item.title}</div>
+                    <div className="mt-2 text-sm text-white/65">{item.detail}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </GlassCard>
           <QuickBookerPanel artists={quickRows} onAddToCart={onAddToCart} onNavigate={onNavigate} />
@@ -1051,7 +1272,11 @@ function LandingPage({
       <div className="overflow-x-auto border-y border-white/8 bg-white/[0.02] py-4">
         <div className="flex min-w-max gap-3">
           {services.map((service) => (
-            <button key={service[0]} className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-white/70 transition hover:border-white/20 hover:text-white">
+            <button
+              key={service[0]}
+              onClick={() => onNavigate(`/${service[1]}`)}
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-white/70 transition hover:border-white/20 hover:text-white"
+            >
               {service[0]}
             </button>
           ))}
@@ -1065,7 +1290,13 @@ function LandingPage({
         </div>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {services.map((service) => (
-            <ImageCard key={service[0]} image={service[2]} title={service[0]} subtitle="Curated artists, safe payments, premium execution" />
+            <ImageCard
+              key={service[0]}
+              image={service[2]}
+              title={service[0]}
+              subtitle="Curated artists, safe payments, premium execution"
+              onClick={() => onNavigate(`/${service[1]}`)}
+            />
           ))}
         </div>
       </section>
@@ -1078,6 +1309,17 @@ function LandingPage({
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {artists.slice(0, 3).map((artist) => (
             <ArtistCard key={artist.id} artist={artist} onAddToCart={onAddToCart} onNavigate={onNavigate} />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {trustPillars.map((item) => (
+            <GlassCard key={item.title} className="space-y-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/5">
+                <Lock size={18} className="text-[#ffb340]" />
+              </div>
+              <div className="text-lg font-bold">{item.title}</div>
+              <p className="text-sm text-white/65">{item.detail}</p>
+            </GlassCard>
           ))}
         </div>
         <div className="flex flex-wrap gap-3">
@@ -1094,9 +1336,9 @@ function LandingPage({
           <SectionLabel>How It Works — Booker</SectionLabel>
           <div className="mt-4 space-y-4">
             {[
-              "Discover and Shortlist artists by city and category",
-              "Add to cart or Quick Book directly",
-              "Sign up, pay securely, booking confirmed",
+              "Discover artists by city, occasion, category, or premium tier",
+              "Pay the full amount plus tax into escrow before the event",
+              "Approve successful completion and release payout after platform fees",
             ].map((item, index) => (
               <div key={item} className="flex gap-4 rounded-2xl bg-black/20 p-4">
                 <div className={`${gradientClass} flex h-10 w-10 items-center justify-center rounded-2xl font-black text-black`}>
@@ -1112,9 +1354,9 @@ function LandingPage({
           <SectionLabel>How It Works — Artist</SectionLabel>
           <div className="mt-4 space-y-4">
             {[
-              "Create your profile with media, packages and KYC",
-              "Receive client enquiries and bid on gigs",
-              "Perform and get paid via escrow",
+              "Complete KYC, upload media, and set occasion-wise pricing",
+              "Receive local plus pan-India enquiries and respond with bids",
+              "Perform with confidence and receive payout after event completion",
             ].map((item, index) => (
               <div key={item} className="flex gap-4 rounded-2xl bg-black/20 p-4">
                 <div className={`${gradientClass} flex h-10 w-10 items-center justify-center rounded-2xl font-black text-black`}>
@@ -1137,19 +1379,42 @@ function LandingPage({
         </div>
       </div>
 
-      <GlassCard>
-        <div className="flex flex-wrap gap-3 text-sm text-white/70">
-          <span>500+ Verified Artists</span>
-          <span>·</span>
-          <span>Escrow-Protected Payments</span>
-          <span>·</span>
-          <span>Instant Booking</span>
-          <span>·</span>
-          <span>KYC Verified</span>
-          <span>·</span>
-          <span>Dispute Resolution</span>
-        </div>
-      </GlassCard>
+      <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <GlassCard>
+          <SectionLabel>Why clients trust GiggiFi</SectionLabel>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {[
+              "Client pays full amount + tax upfront",
+              "Funds move into protected escrow",
+              "Artist payout releases after commission + tax deduction",
+              "Booking can be tracked and saved to calendar",
+            ].map((item) => (
+              <div key={item} className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4 text-white/75">
+                {item}
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+        <GlassCard className="grid gap-6 md:grid-cols-[140px_1fr] md:items-center">
+          <img
+            src={founderProfile.image}
+            alt={founderProfile.name}
+            className="h-36 w-36 rounded-[1.8rem] border border-white/10 object-cover"
+          />
+          <div>
+            <SectionLabel>Founder</SectionLabel>
+            <div className="mt-2 text-2xl font-black">{founderProfile.name}</div>
+            <div className="mt-2 text-white/70">{founderProfile.title}</div>
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-white/65">
+              {founderProfile.highlights.map((item) => (
+                <span key={item} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </GlassCard>
+      </section>
 
       <section className="grid gap-6 md:grid-cols-3">
         {testimonials.map((item) => (
@@ -1207,8 +1472,12 @@ function QuickBookerPanel({
           .toLowerCase()
           .includes(lower),
       )
-      .slice(0, 3);
+      .slice(0, 4);
   }, [artists, city, deferredQuery]);
+  const premiumRows = filtered
+    .slice()
+    .sort((left, right) => right.rating - left.rating || right.basePriceSolo - left.basePriceSolo)
+    .slice(0, 3);
 
   return (
     <GlassCard className="relative overflow-hidden">
@@ -1291,6 +1560,31 @@ function QuickBookerPanel({
             ))}
           </div>
         </div>
+
+        <div className="space-y-3">
+          <SectionLabel>Premium artists in {city}</SectionLabel>
+          <div className="grid gap-3 md:grid-cols-3">
+            {premiumRows.map((artist) => (
+              <div key={artist.id} className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/20">
+                <img src={artist.coverPhoto} alt={artist.stageName} className="h-36 w-full object-cover" />
+                <div className="space-y-2 p-4">
+                  <div className="font-semibold">{artist.stageName}</div>
+                  <div className="text-sm text-white/60">{artist.category} · {artist.city}</div>
+                  <div className="flex items-center justify-between text-sm text-white/70">
+                    <span className="flex items-center gap-1"><Star size={13} fill="currentColor" className="text-[#ffb340]" /> {artist.rating}</span>
+                    <span>{formatINR(artist.basePriceSolo)}</span>
+                  </div>
+                  <button
+                    className={`${gradientClass} w-full rounded-2xl px-4 py-2 text-sm font-semibold text-black`}
+                    onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}
+                  >
+                    Book
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </GlassCard>
   );
@@ -1300,19 +1594,270 @@ function ImageCard({
   image,
   title,
   subtitle,
+  onClick,
 }: {
   image: string;
   title: string;
   subtitle: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-[1.8rem] border border-white/10 transition hover:-translate-y-1">
+    <button onClick={onClick} className="group relative overflow-hidden rounded-[1.8rem] border border-white/10 text-left transition hover:-translate-y-1">
       <img src={image} alt={title} className="h-72 w-full object-cover transition duration-500 group-hover:scale-105" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 p-5">
         <div className="text-xl font-bold">{title}</div>
         <div className="mt-1 text-sm text-white/70">{subtitle}</div>
       </div>
+    </button>
+  );
+}
+
+function ServicesPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+  return (
+    <div className="space-y-8">
+      <GlassCard className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div>
+          <SectionLabel>Services</SectionLabel>
+          <h1 className="mt-2 text-4xl font-black md:text-6xl">Occasion-led discovery for premium entertainment bookings.</h1>
+          <p className="mt-4 max-w-2xl text-white/70">
+            Browse by event type first, then move into city, talent, and trust filters without losing the
+            core GiggiFi booking flow.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {trustPillars.slice(0, 2).map((item) => (
+            <div key={item.title} className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+              <div className="font-semibold">{item.title}</div>
+              <div className="mt-2 text-sm text-white/65">{item.detail}</div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {services.map((service) => (
+          <ImageCard
+            key={service[0]}
+            image={service[2]}
+            title={service[0]}
+            subtitle="Book verified artists with escrow-backed payments"
+            onClick={() => onNavigate(`/${service[1]}`)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ServiceDetailPage({
+  service,
+  artists,
+  onAddToCart,
+  onNavigate,
+}: {
+  service: (typeof services)[number];
+  artists: ArtistRecord[];
+  onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
+  onNavigate: (path: string) => void;
+}) {
+  const relevantArtists = artists
+    .filter((artist) =>
+      [artist.tagline, artist.category, artist.genres.join(" ")].join(" ").toLowerCase().includes(service[0].toLowerCase().split(" ")[0].toLowerCase()),
+    )
+    .slice(0, 6);
+  const fallbackArtists = relevantArtists.length ? relevantArtists : artists.slice(0, 6);
+  return (
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-[2rem] border border-white/10">
+        <img src={service[2]} alt={service[0]} className="h-[360px] w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#06020b] via-[#06020b]/60 to-transparent" />
+        <div className="absolute inset-y-0 left-0 flex max-w-2xl items-center p-8 md:p-12">
+          <div>
+            <SectionLabel>{service[0]}</SectionLabel>
+            <h1 className="mt-2 text-4xl font-black md:text-6xl">{service[0]}</h1>
+            <p className="mt-4 text-white/70">
+              Premium discovery, transparent escrow, verified artists, and a clear performance-to-payout journey for {service[0].toLowerCase()} bookings.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button onClick={() => onNavigate("/booker/discover")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+                Open Artist Discovery
+              </button>
+              <button onClick={() => onNavigate("/booker/dashboard")} className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white">
+                Booker Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        {[
+          "Escrow protection for every confirmed booking",
+          "Verified artists with strong platform trust indicators",
+          "Platform fee + artist payout communicated clearly",
+          "Cancellation and reliability support handled inside GiggiFi",
+        ].map((item) => (
+          <GlassCard key={item} className="text-sm text-white/70">
+            {item}
+          </GlassCard>
+        ))}
+      </div>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {fallbackArtists.map((artist) => (
+          <ArtistCard key={artist.id} artist={artist} onAddToCart={onAddToCart} onNavigate={onNavigate} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VerifiedArtistsPage({
+  artists,
+  onAddToCart,
+  onNavigate,
+}: {
+  artists: ArtistRecord[];
+  onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
+  onNavigate: (path: string) => void;
+}) {
+  const verifiedArtists = artists.filter((artist) => artist.kycStatus === "APPROVED");
+  return (
+    <div className="space-y-8">
+      <GlassCard className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div>
+          <SectionLabel>Verified Artists</SectionLabel>
+          <h1 className="mt-2 text-4xl font-black md:text-6xl">Profiles backed by KYC, media, and trust signals.</h1>
+          <p className="mt-4 text-white/70">
+            These cards highlight verified artists with visible platform trust indicators so bookers can move
+            from discovery to escrow-backed payment with less uncertainty.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {trustPillars.slice(0, 3).map((item) => (
+            <div key={item.title} className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4">
+              <div className="font-semibold">{item.title}</div>
+              <div className="mt-2 text-sm text-white/65">{item.detail}</div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {verifiedArtists.map((artist) => (
+          <ArtistCard key={artist.id} artist={artist} onAddToCart={onAddToCart} onNavigate={onNavigate} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CitiesCoveredPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+  return (
+    <div className="space-y-8">
+      <GlassCard className="space-y-4">
+        <SectionLabel>Cities Covered</SectionLabel>
+        <h1 className="text-4xl font-black md:text-6xl">Premium entertainment discovery across India.</h1>
+        <p className="max-w-2xl text-white/70">
+          City-led browsing helps bookers find trusted local artists fast, while still opening access to pan-India premium talent where needed.
+        </p>
+      </GlassCard>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {cityShowcase.map((city) => (
+          <ImageCard
+            key={city.name}
+            image={city.image}
+            title={city.name}
+            subtitle={city.detail}
+            onClick={() => onNavigate("/booker/discover")}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CelebrityPage({
+  artists,
+  onNavigate,
+}: {
+  artists: ArtistRecord[];
+  onNavigate: (path: string) => void;
+}) {
+  const premiumArtists = artists
+    .slice()
+    .sort((left, right) => right.basePriceSolo - left.basePriceSolo || right.rating - left.rating)
+    .slice(0, 4);
+  return (
+    <div className="space-y-8">
+      <GlassCard className="grid gap-6 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+        <div>
+          <SectionLabel>Celebrity</SectionLabel>
+          <h1 className="mt-2 text-4xl font-black md:text-6xl">Premium artists joined with us.</h1>
+          <p className="mt-4 text-white/70">
+            A luxury-facing presentation for headline talent, celebrity-format acts, and high-visibility bookings that still sit inside GiggiFi&apos;s trust-first marketplace.
+          </p>
+          <button onClick={() => onNavigate("/booker/discover")} className={`${gradientClass} mt-6 rounded-2xl px-6 py-3 font-semibold text-black`}>
+            Start Premium Discovery
+          </button>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {celebrityShowcase.map((item) => (
+            <ImageCard key={item.name} image={item.image} title={item.name} subtitle={item.detail} />
+          ))}
+        </div>
+      </GlassCard>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {premiumArtists.map((artist) => (
+          <GlassCard key={artist.id} className="overflow-hidden p-0">
+            <img src={artist.coverPhoto} alt={artist.stageName} className="h-56 w-full object-cover" />
+            <div className="space-y-2 p-5">
+              <div className="text-xl font-bold">{artist.stageName}</div>
+              <div className="text-sm text-white/60">{artist.category} · {artist.city}</div>
+              <div className="text-sm text-[#ffb340]">{formatINR(artist.basePriceSolo)}</div>
+            </div>
+          </GlassCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SocialPage({ onNavigate }: { onNavigate: (path: string) => void }) {
+  return (
+    <div className="space-y-8">
+      <GlassCard className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <div>
+          <SectionLabel>Social</SectionLabel>
+          <h1 className="mt-2 text-4xl font-black md:text-6xl">Reels, event moments, celebrity highlights, and testimonials.</h1>
+          <p className="mt-4 text-white/70">
+            Social proof on GiggiFi should feel premium, image-led, and brand-safe while still pushing users back into verified artist discovery and bookings.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {[
+            "Artist reels that help bookers trust performance quality",
+            "Luxury event moments showing crowd energy and stage presence",
+            "Celebrity highlights that elevate the premium marketplace layer",
+            "Testimonials that reinforce reliability, trust, and delivery",
+          ].map((item) => (
+            <div key={item} className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4 text-white/70">
+              {item}
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {socialShowcase.map((item) => (
+          <ImageCard key={item.title} image={item.image} title={item.title} subtitle={item.detail} />
+        ))}
+      </div>
+      <GlassCard className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="text-2xl font-black">Turn interest into bookings</div>
+          <div className="mt-2 text-white/65">Move from social proof into trusted artist discovery and checkout.</div>
+        </div>
+        <button onClick={() => onNavigate("/booker/discover")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+          Browse Artists
+        </button>
+      </GlassCard>
     </div>
   );
 }
@@ -2433,48 +2978,80 @@ function BookerDashboardPage({
 }) {
   const [city, setCity] = useState("Mumbai");
   const [query, setQuery] = useState("");
-  const filtered = artists
+  const [selectedOccasion, setSelectedOccasion] = useState<(typeof occasions)[number][0]>(
+    occasions[2][0],
+  );
+  const localArtists = artists
     .filter((artist) => artist.city === city)
     .filter((artist) =>
       [artist.stageName, artist.category, artist.city, artist.tagline].join(" ").toLowerCase().includes(query.toLowerCase()),
     );
+  const panIndiaArtists = artists
+    .filter((artist) => artist.city !== city)
+    .filter((artist) =>
+      [artist.stageName, artist.category, artist.city, artist.tagline].join(" ").toLowerCase().includes(query.toLowerCase()),
+    )
+    .slice(0, 4);
+  const featuredArtists = (localArtists.length ? localArtists : artists).slice(0, 4);
+  const premiumArtists = (localArtists.length ? localArtists : artists)
+    .slice()
+    .sort((left, right) => right.rating - left.rating || right.basePriceSolo - left.basePriceSolo)
+    .slice(0, 3);
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <GlassCard className="space-y-6">
-        <div className="flex items-start justify-between">
+    <div className="space-y-6">
+      <GlassCard className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="space-y-6">
           <div>
-            <div className="text-2xl font-black">Discovery controls</div>
-            <div className="mt-2 inline-flex rounded-full bg-white/5 px-3 py-1 text-sm text-white/70">{city}</div>
+            <SectionLabel>Booker Dashboard</SectionLabel>
+            <div className="mt-2 text-3xl font-black md:text-5xl">Search artists, sort by occasion, and move confidently into escrow-backed payment.</div>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <SectionLabel>Occasion selector</SectionLabel>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {occasions.map((occasion) => (
+                  <button
+                    key={occasion[1]}
+                    onClick={() => setSelectedOccasion(occasion[0])}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-sm",
+                      selectedOccasion === occasion[0]
+                        ? `${gradientClass} text-black`
+                        : "border border-white/10 bg-white/5 text-white/70",
+                    )}
+                  >
+                    {occasion[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <SectionLabel>Search artist</SectionLabel>
+              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                <Search size={18} className="text-[#ffb340]" />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search artist, genre, city..." className="w-full bg-transparent outline-none placeholder:text-white/30" />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {cityOptions.map((item) => (
+                  <button key={item} onClick={() => setCity(item)} className={cn("rounded-full px-4 py-2 text-sm", city === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-        <div className="grid gap-5 md:grid-cols-2">
-          <div>
-            <SectionLabel>Occasion quick picks</SectionLabel>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {occasions.map((occasion, index) => (
-                <button key={occasion[0]} className={cn("rounded-full px-4 py-2 text-sm", index === 2 ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
-                  {occasion[0]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <SectionLabel>Search</SectionLabel>
-            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-              <Search size={18} className="text-[#ffb340]" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search artist, genre, city..." className="w-full bg-transparent outline-none placeholder:text-white/30" />
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {cityOptions.map((item) => (
-                <button key={item} onClick={() => setCity(item)} className={cn("rounded-full px-4 py-2 text-sm", city === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+          <StatCard title="Current occasion" value={selectedOccasion} note="Shortlist and pricing tuned for this brief" />
+          <StatCard title="Artists in cart" value={String(cartArtistCount)} note="Open cart and payment summary" onClick={() => onNavigate("/cart")} />
+          <StatCard title="Escrow note" value="Held safely" note="Client pays full amount + tax before performance" />
         </div>
-        <div className="space-y-4">
-          {filtered.slice(0, 4).map((artist) => (
+      </GlassCard>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <GlassCard className="space-y-4">
+          <div className="text-2xl font-black">Featured artists in {city}</div>
+          {featuredArtists.map((artist) => (
             <div key={artist.id} className="flex flex-col gap-4 rounded-[1.5rem] bg-black/20 p-4 md:flex-row md:items-center">
               <img src={artist.profilePhoto} alt={artist.stageName} className="h-16 w-16 rounded-2xl object-cover" />
               <div className="min-w-0 flex-1">
@@ -2485,44 +3062,62 @@ function BookerDashboardPage({
                 <div className="text-sm text-white/60">{artist.category} · {artist.city}</div>
                 <div className="text-sm text-white/60">{artist.tagline}</div>
               </div>
-              <div className="text-sm text-white/80">{formatINR(artist.basePriceSolo)}</div>
+              <div className="text-right text-sm text-white/80">
+                <div className="flex items-center gap-1"><Star size={14} fill="currentColor" className="text-[#ffb340]" /> {artist.rating}</div>
+                <div>{formatINR(artist.basePriceSolo)}</div>
+              </div>
               <div className="flex gap-2">
-                <button className={`${gradientClass} rounded-2xl px-4 py-2 text-sm font-semibold text-black`} onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}>
+                <button className={`${gradientClass} rounded-2xl px-4 py-2 text-sm font-semibold text-black`} onClick={() => onAddToCart(artist.id, selectedOccasion, artist.city)}>
                   Add to cart
                 </button>
                 <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}`)}>
-                  Book now
+                  Open profile
                 </button>
               </div>
             </div>
           ))}
-        </div>
-      </GlassCard>
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
-          <StatCard title="Current occasion" value="Wedding" note="Shortlist tuned for cocktails" />
-          <StatCard title="Artists in cart" value={String(cartArtistCount)} note="Click to proceed to cart" onClick={() => onNavigate("/cart")} />
-          <StatCard title="Avg response window" value="24 hrs" note="Fastest in Mumbai" />
-        </div>
-        <GlassCard className="space-y-4">
-          <div className="text-2xl font-black">Premium artists near {city}</div>
-          {filtered.slice(0, 3).map((artist) => (
-            <div key={artist.id} className="flex items-center gap-3 rounded-2xl bg-black/20 p-3">
-              <img src={artist.profilePhoto} alt={artist.stageName} className="h-12 w-12 rounded-2xl object-cover" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{artist.stageName}</div>
-                <div className="text-sm text-white/60">{artist.genres.slice(0, 2).join(" • ")}</div>
-              </div>
-              <button className={`${gradientClass} rounded-2xl px-3 py-2 text-sm font-semibold text-black`} onClick={() => onNavigate(`/booker/artist/${artist.id}`)}>
-                Book
-              </button>
-            </div>
-          ))}
-          <button className={`${gradientClass} h-12 w-full rounded-2xl font-semibold text-black`} onClick={() => onNavigate("/payment")}>
-            Continue to payment
-          </button>
         </GlassCard>
+
+        <div className="space-y-6">
+          <GlassCard className="space-y-4">
+            <div className="text-2xl font-black">Premium artists near {city}</div>
+            {premiumArtists.map((artist) => (
+              <div key={artist.id} className="flex items-center gap-3 rounded-2xl bg-black/20 p-3">
+                <img src={artist.profilePhoto} alt={artist.stageName} className="h-12 w-12 rounded-2xl object-cover" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{artist.stageName}</div>
+                  <div className="text-sm text-white/60">{artist.genres.slice(0, 2).join(" • ")}</div>
+                </div>
+                <button className={`${gradientClass} rounded-2xl px-3 py-2 text-sm font-semibold text-black`} onClick={() => onAddToCart(artist.id, selectedOccasion, artist.city)}>
+                  Book
+                </button>
+              </div>
+            ))}
+          </GlassCard>
+
+          <GlassCard className="space-y-4">
+            <div className="text-2xl font-black">Pan-India artists</div>
+            {panIndiaArtists.map((artist) => (
+              <div key={artist.id} className="flex items-center justify-between gap-3 rounded-2xl bg-black/20 p-3">
+                <div>
+                  <div className="font-semibold">{artist.stageName}</div>
+                  <div className="text-sm text-white/60">{artist.category} · {artist.city}</div>
+                </div>
+                <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}`)}>
+                  View
+                </button>
+              </div>
+            ))}
+          </GlassCard>
+        </div>
       </div>
+
+      <GlassCard className="grid gap-4 md:grid-cols-4">
+        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Client pays full amount + tax into escrow.</div>
+        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Funds stay protected until successful event completion.</div>
+        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Artist payout is released after platform commission and tax deduction.</div>
+        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Save the booking to calendar and track every status change inside GiggiFi.</div>
+      </GlassCard>
     </div>
   );
 }
@@ -2539,6 +3134,9 @@ function DiscoverPage({
   const [city, setCity] = useState("Mumbai");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [selectedOccasion, setSelectedOccasion] = useState<(typeof occasions)[number][0]>(
+    occasions[2][0],
+  );
   const filtered = artists.filter((artist) => {
     const cityMatch = artists.some((item) => item.city === city) ? artist.city === city : true;
     const queryMatch = [artist.stageName, artist.category, artist.city, artist.genres.join(" ")].join(" ").toLowerCase().includes(query.toLowerCase());
@@ -2548,18 +3146,36 @@ function DiscoverPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+        <div>
+          <SectionLabel>Artists</SectionLabel>
+          <h1 className="mt-2 text-3xl font-black md:text-5xl">Browse verified artists by city, category, and occasion.</h1>
+        </div>
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
           <Search size={18} className="text-[#ffb340]" />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search singer, band, dancer, city..." className="w-full bg-transparent outline-none placeholder:text-white/30" />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {occasions.map((occasion) => (
+            <button
+              key={occasion[1]}
+              onClick={() => setSelectedOccasion(occasion[0])}
+              className={cn("rounded-full px-4 py-2 text-sm", selectedOccasion === occasion[0] ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}
+            >
+              {occasion[0]}
+            </button>
+          ))}
         </div>
         <div className="flex flex-wrap gap-2">
           {cityOptions.map((item) => (
             <button key={item} onClick={() => setCity(item)} className={cn("rounded-full px-4 py-2 text-sm", city === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
               {item}
             </button>
-          ))}
+            ))}
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={() => setCategory("all")} className={cn("rounded-full px-4 py-2 text-sm", category === "all" ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
+            All artists
+          </button>
           {artistMenus.map((item) => (
             <button key={item[0]} onClick={() => setCategory(item[0].toLowerCase())} className={cn("rounded-full px-4 py-2 text-sm", category === item[0].toLowerCase() ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
               {item[0]}
@@ -2569,7 +3185,7 @@ function DiscoverPage({
       </div>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((artist) => (
-          <ArtistCard key={artist.id} artist={artist} onAddToCart={onAddToCart} onNavigate={onNavigate} />
+          <ArtistCard key={artist.id} artist={artist} onAddToCart={(artistId, _, artistCity) => onAddToCart(artistId, selectedOccasion, artistCity)} onNavigate={onNavigate} />
         ))}
       </div>
     </div>
@@ -2674,7 +3290,7 @@ function ArtistProfilePage({
         <div className="space-y-4 lg:sticky lg:top-36 lg:self-start">
           <GlassCard>
             <div className="text-xl font-bold">Book {artist.stageName}</div>
-            <p className="mt-2 text-sm text-white/60">Quotes, bookings, and payments stay in one tracked flow so artists and bookers see the same booking state.</p>
+            <p className="mt-2 text-sm text-white/60">Quotes, approvals, escrow status, and payout release stay visible to both sides in one tracked GiggiFi flow.</p>
             <div className="mt-4 space-y-3">
               <button className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}/enquiry`)}>
                 Send Enquiry
@@ -2683,6 +3299,19 @@ function ArtistProfilePage({
                 Quick Book
               </button>
             </div>
+          </GlassCard>
+          <GlassCard className="space-y-3">
+            <div className="text-lg font-bold">Trust and payout logic</div>
+            {[
+              "Booker pays full amount plus tax into escrow",
+              "Artist payout releases after successful event completion",
+              "Platform fee and tax are visible before payment",
+              "Reliability and cancellation support stays inside GiggiFi",
+            ].map((item) => (
+              <div key={item} className="rounded-[1.3rem] border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+                {item}
+              </div>
+            ))}
           </GlassCard>
         </div>
       </div>
@@ -3197,6 +3826,8 @@ function ArtistDashboardPage({
   bookings: BookingRecord[];
 }) {
   const artistBookings = bookings.filter((item) => item.artistId === artist.id);
+  const completedWorks = artistBookings.filter((item) => item.status === "EVENT_COMPLETED" || item.status === "PAYOUT_RELEASED");
+  const openWorks = artistBookings.filter((item) => item.status === "ENQUIRY_SENT" || item.status === "QUOTE_RECEIVED" || item.status === "AWAITING_PAYMENT");
   return (
     <div className="space-y-6">
       <GlassCard className="flex items-center justify-between">
@@ -3240,6 +3871,17 @@ function ArtistDashboardPage({
                 </div>
               ))}
             </div>
+            <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+              <img src={artist.profilePhoto} alt={artist.stageName} className="h-72 w-full rounded-[1.6rem] object-cover" />
+              <div className="grid gap-4 md:grid-cols-2">
+                {artist.portfolioPhotos.slice(0, 2).map((photo) => (
+                  <img key={photo} src={photo} alt={artist.stageName} className="h-40 w-full rounded-[1.4rem] object-cover" />
+                ))}
+                {artist.portfolioVideos.slice(0, 2).map((video) => (
+                  <video key={video} src={video} controls className="h-40 w-full rounded-[1.4rem] object-cover" />
+                ))}
+              </div>
+            </div>
             <div className="flex flex-wrap gap-3">
               <button className={`${gradientClass} rounded-2xl px-5 py-3 font-semibold text-black`}>Upload Press Kit</button>
               <button className="rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white">Upload Reel</button>
@@ -3248,13 +3890,14 @@ function ArtistDashboardPage({
             </div>
           </GlassCard>
           <GlassCard className="space-y-4">
-            <div className="text-2xl font-black">Packages and Pricing</div>
+            <div className="text-2xl font-black">Occasion-wise pricing</div>
             <div className="grid gap-4 md:grid-cols-2">
               {artist.packages.map((pkg) => (
                 <div key={pkg.title} className="rounded-[1.4rem] bg-black/20 p-4">
                   <div className="font-semibold">{pkg.title}</div>
                   <div className="mt-2 text-[#ffb340]">{formatINR(pkg.price)}</div>
                   <div className="mt-2 text-sm text-white/60">{pkg.description}</div>
+                  <div className="mt-3 text-xs uppercase tracking-[0.18em] text-white/40">Wedding • Corporate • Private</div>
                 </div>
               ))}
             </div>
@@ -3278,13 +3921,27 @@ function ArtistDashboardPage({
               </div>
             ))}
           </GlassCard>
+          <GlassCard className="space-y-4">
+            <div className="text-2xl font-black">Recent works and completed events</div>
+            {(completedWorks.length ? completedWorks : artistBookings).slice(0, 3).map((booking) => (
+              <div key={booking.id} className="rounded-[1.4rem] bg-black/20 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold">{booking.eventName}</div>
+                    <div className="text-sm text-white/60">{booking.eventType} · {booking.eventCity}</div>
+                  </div>
+                  <div className="text-sm text-[#ffb340]">{bookingStatusLabels[booking.status]}</div>
+                </div>
+              </div>
+            ))}
+          </GlassCard>
         </div>
         <div className="space-y-6">
           <div className="grid gap-4">
             <StatCard title="Monthly revenue" value="₹1.8L" note="Escrow-backed payouts" />
             <StatCard title="Shows done" value="47" note="Across weddings and corporate" />
             <StatCard title="Ratings" value="4.9" note="Premium client reviews" />
-            <StatCard title="Open enquiries" value="3" note="Respond within 24 hours" />
+            <StatCard title="Open enquiries" value={String(openWorks.length || 3)} note="Respond within 24 hours" />
             <StatCard title="Pending bids" value="12" note="High-intent opportunities" />
           </div>
           <GlassCard>
@@ -3296,6 +3953,15 @@ function ArtistDashboardPage({
               <InfoLine label="IFSC" value={artist.bankIFSC || "Pending"} />
             </div>
             <button className={`${gradientClass} mt-5 rounded-2xl px-5 py-3 font-semibold text-black`}>Upload KYC Documents</button>
+          </GlassCard>
+          <GlassCard className="space-y-3">
+            <div className="text-xl font-black">Availability calendar</div>
+            <SimpleCalendar blackoutDates={artist.blackoutDates} bookedDates={artistBookings.map((item) => item.eventDate)} />
+          </GlassCard>
+          <GlassCard className="space-y-3">
+            <div className="text-xl font-black">Enquiry coverage</div>
+            <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/70">Local enquiries from {artist.city} plus pan-India requests across {artist.serviceableStates.slice(0, 4).join(", ")}.</div>
+            <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/70">GiggiFi tracks reliability, payment status, and payout release in one artist workspace.</div>
           </GlassCard>
         </div>
       </div>
@@ -3457,30 +4123,43 @@ function CartPage({
   cart,
   onRemove,
   onNavigate,
+  session,
 }: {
   artists: ArtistRecord[];
   cart: MockDatabase["carts"][number] | undefined;
   onRemove: (artistId: string) => Promise<void>;
   onNavigate: (path: string) => void;
+  session: SessionPayload | null;
 }) {
+  const subtotal = artists.reduce((sum, artist) => sum + artist.basePriceSolo, 0);
+  const pricing = calculatePricing(subtotal);
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <GlassCard className="space-y-4">
         <div className="text-3xl font-black">Selected artists</div>
+        {!artists.length ? (
+          <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-6 text-white/70">
+            Your cart is empty right now. Add artists from discovery, verified, or city-led browsing.
+          </div>
+        ) : null}
         {artists.map((artist) => (
           <div key={artist.id} className="flex items-center gap-4 rounded-[1.5rem] bg-black/20 p-4">
             <img src={artist.profilePhoto} alt={artist.stageName} className="h-16 w-16 rounded-2xl object-cover" />
             <div className="min-w-0 flex-1">
               <div className="truncate font-semibold">{artist.stageName}</div>
-              <div className="text-sm text-white/60">{artist.category} · {formatINR(artist.basePriceSolo)}</div>
+              <div className="text-sm text-white/60">{artist.category} · {cart?.city ?? artist.city}</div>
+              <div className="text-sm text-[#ffb340]">{formatINR(artist.basePriceSolo)}</div>
             </div>
             <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white" onClick={() => onRemove(artist.id)}>
               Remove
             </button>
           </div>
         ))}
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+          Client pays the full amount plus tax. Funds are held in escrow and artist payout releases only after successful event completion, platform fee deduction, and status confirmation.
+        </div>
         <div className="flex flex-wrap gap-3">
-          <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onNavigate("/payment")}>
+          <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onNavigate(session?.role === "BOOKER" ? "/payment" : "/login?next=/payment")}>
             Proceed to Payment
           </button>
           <button className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white" onClick={() => onNavigate("/booker/discover")}>
@@ -3491,7 +4170,8 @@ function CartPage({
       <GlassCard className="space-y-4">
         <StatCard title="Artists selected" value={String(artists.length)} note="Ready for checkout" />
         <StatCard title="Occasion" value={cart?.occasion ?? "Wedding"} note="Saved from discovery" />
-        <StatCard title="Checkout status" value="Secure" note="Logged in and protected" />
+        <StatCard title="City" value={cart?.city ?? "Mumbai"} note="Primary event location" />
+        <StatCard title="Amount summary" value={formatINR(pricing.total)} note={`Artist fees ${formatINR(pricing.artistFee)} + platform + GST`} />
       </GlassCard>
     </div>
   );
@@ -3500,29 +4180,101 @@ function CartPage({
 function PaymentPage({
   cart,
   artists,
+  onNavigate,
+  session,
 }: {
   cart: MockDatabase["carts"][number] | undefined;
   artists: ArtistRecord[];
+  onNavigate: (path: string) => void;
+  session: SessionPayload | null;
 }) {
+  const [method, setMethod] = useState<"UPI" | "Card" | "Netbanking">("UPI");
+  const [holderName, setHolderName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [success, setSuccess] = useState(false);
   const selectedArtists = artists.filter((artist) => cart?.artistIds.includes(artist.id));
+  const subtotal = selectedArtists.reduce((sum, artist) => sum + artist.basePriceSolo, 0);
+  const pricing = calculatePricing(subtotal);
+
+  if (!session?.userId || session.role !== "BOOKER" || !session.hasBookerProfile) {
+    return (
+      <GlassCard className="mx-auto max-w-2xl space-y-5 text-center">
+        <div className="text-3xl font-black">Login required before payment</div>
+        <p className="text-white/70">
+          Your selected artists are saved. Continue as a booker to review payment, escrow, and confirmation.
+        </p>
+        <div className="flex justify-center">
+          <button onClick={() => onNavigate("/login?next=/payment")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+            Login as Booker
+          </button>
+        </div>
+      </GlassCard>
+    );
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <GlassCard className="space-y-5">
         <div className="text-3xl font-black">Payment</div>
+        <div className="flex flex-wrap gap-2">
+          {(["UPI", "Card", "Netbanking"] as const).map((item) => (
+            <button
+              key={item}
+              onClick={() => setMethod(item)}
+              className={cn("rounded-full px-4 py-2 text-sm", method === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        {success ? (
+          <div className="space-y-4 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-6">
+            <div className="text-2xl font-black text-emerald-200">Payment summary recorded</div>
+            <p className="text-sm text-emerald-100">
+              Your booking request has moved into a confirmation-ready state. Funds are treated as escrow-bound in the product flow, and the final payout release happens after successful event completion.
+            </p>
+            <button onClick={() => onNavigate("/booker/bookings")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+              View Booker Workspace
+            </button>
+          </div>
+        ) : null}
         <div className="rounded-[1.5rem] bg-black/20 p-5">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Holder name" value="" onChange={() => undefined} />
-            <Field label="Card number" value="" onChange={() => undefined} />
-            <Field label="Expiry" value="" onChange={() => undefined} />
-            <Field label="CVV" value="" onChange={() => undefined} />
+            <Field label="Holder name" value={holderName} onChange={setHolderName} />
+            <Field label={method === "UPI" ? "UPI ID" : "Card number"} value={cardNumber} onChange={setCardNumber} />
+            <Field label={method === "Netbanking" ? "Bank name" : "Expiry"} value={expiry} onChange={setExpiry} />
+            <Field label={method === "UPI" ? "Mobile number" : "CVV"} value={cvv} onChange={setCvv} />
           </div>
         </div>
-        <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>Pay Securely</button>
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+          Payment summary:
+          <div className="mt-3 space-y-2">
+            <FeeRow label="Artist fees" value={pricing.artistFee} />
+            <FeeRow label="Platform fee" value={pricing.platformFee} />
+            <FeeRow label="GST on platform fee" value={pricing.gstAmount} />
+            <FeeRow label="Total payable" value={pricing.total} strong />
+          </div>
+        </div>
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+          Escrow note: client pays the full amount plus tax, GiggiFi holds the money securely, and payout is released after the performance succeeds and commission plus tax are accounted for.
+        </div>
+        <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => setSuccess(true)}>
+          Pay Securely
+        </button>
       </GlassCard>
       <GlassCard className="space-y-4">
         <StatCard title="Artists count" value={String(selectedArtists.length)} note={cart?.occasion ?? "Selected shortlist"} />
         <StatCard title="City" value={cart?.city ?? "Mumbai"} note="Secure checkout enabled" />
-        <StatCard title="Status" value="Protected" note="Logged In" />
+        <StatCard title="Total" value={formatINR(pricing.total)} note="Protected before payout release" />
+        {selectedArtists.map((artist) => (
+          <div key={artist.id} className="rounded-[1.4rem] bg-black/20 p-4">
+            <div className="font-semibold">{artist.stageName}</div>
+            <div className="mt-1 text-sm text-white/60">{artist.category} · {artist.city}</div>
+            <div className="mt-2 text-sm text-[#ffb340]">{formatINR(artist.basePriceSolo)}</div>
+          </div>
+        ))}
       </GlassCard>
     </div>
   );

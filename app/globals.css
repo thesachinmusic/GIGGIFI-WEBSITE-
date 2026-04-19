@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -21,7 +21,7 @@ body {
   min-height: 100vh;
   background: #06020b;
   color: #ffffff;
-  font-family: "Inter", sans-serif;
+  font-family: "Manrope", sans-serif;
 }
 
 * {
@@ -59,6 +59,7 @@ textarea {
 
 .glass-card {
   @apply rounded-[2rem] border border-white/10 bg-white/5 backdrop-blur-xl;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26);
 }
 
 .gradient-text {

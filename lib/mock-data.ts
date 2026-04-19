@@ -357,6 +357,135 @@ export const testimonials = [
   },
 ];
 
+export const cityShowcase = [
+  {
+    name: "Mumbai",
+    detail: "Luxury weddings, hospitality launches, celebrity nights",
+    image:
+      "https://images.unsplash.com/photo-1526481280695-3c4691f7f8e6?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Delhi NCR",
+    detail: "Corporate showcases, destination celebrations, clubs",
+    image:
+      "https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Bengaluru",
+    detail: "Tech events, premium socials, branded experiences",
+    image:
+      "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Goa",
+    detail: "Beach weddings, sundowners, private celebrations",
+    image:
+      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Jaipur",
+    detail: "Heritage venues, destination wedding programming",
+    image:
+      "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Kolkata",
+    detail: "Cultural performances, premium private events",
+    image:
+      "https://images.unsplash.com/photo-1558431382-27e303142255?auto=format&fit=crop&w=1400&q=80",
+  },
+] as const;
+
+export const celebrityShowcase = [
+  {
+    name: "Headline Singer",
+    detail: "Luxury weddings • curated private stages • brand appearances",
+    image:
+      "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Premium Host",
+    detail: "Awards nights • launches • celebrity moderation",
+    image:
+      "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Luxury Band",
+    detail: "Reception stages • club residencies • festival headliners",
+    image:
+      "https://images.unsplash.com/photo-1501612780327-45045538702b?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    name: "Spotlight Performer",
+    detail: "Premium choreography • visual production • curated acts",
+    image:
+      "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=1400&q=80",
+  },
+] as const;
+
+export const socialShowcase = [
+  {
+    title: "Artist Reels",
+    detail: "Vertical cuts built for discovery, trust, and faster shortlists.",
+    image:
+      "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    title: "Event Moments",
+    detail: "Luxury guest reactions, stage energy, and premium crowd shots.",
+    image:
+      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    title: "Celebrity Highlights",
+    detail: "High-end management moments, backstage clips, and arrivals.",
+    image:
+      "https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    title: "Client Testimonials",
+    detail: "Elegant proof from weddings, hotels, brands, and private hosts.",
+    image:
+      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1400&q=80",
+  },
+] as const;
+
+export const trustPillars = [
+  {
+    title: "Escrow-first payments",
+    detail:
+      "Clients pay the full amount plus tax upfront. GiggiFi holds funds safely until the event is completed.",
+  },
+  {
+    title: "Verified artist network",
+    detail:
+      "KYC, identity checks, and profile reviews keep discovery premium and reduce reliability risk.",
+  },
+  {
+    title: "Transparent commissions",
+    detail:
+      "Bookers see the platform fee. Artists know the payout after commission and tax deduction before confirmation.",
+  },
+  {
+    title: "Reliability and dispute support",
+    detail:
+      "Cancellation policies, tracked booking stages, and platform intervention protect both sides.",
+  },
+] as const;
+
+export const founderProfile = {
+  name: "Sachin Chaudhary",
+  title: "Singer, songwriter, tutor, performer, musician",
+  image: "/media/sach/profile.jpg",
+  highlights: [
+    "Represented India in London",
+    "Performed across Dubai tours",
+    "Delivered shows across major Indian states and 5-star hotels",
+    "116k YouTube subscribers and Silver Play Button creator",
+    "Recording studio owner and working live performer",
+  ],
+} as const;
+
 export function calculatePricing(artistFee: number) {
   const platformFee = Math.round(artistFee * 0.1);
   const gstAmount = Math.round(platformFee * 0.18);
