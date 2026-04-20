@@ -1,7 +1,7 @@
 # CLAUDE.md / CODEX_MEMORY.md
 ## Project: GIGGIFI Website
 ## Owner: Sachin / thesachinmusic
-## Last updated: 2026-04-14
+## Last updated: 2026-04-20
 
 This file is a working memory dump for Codex or any coding agent so it can continue the project without losing context.
 
@@ -10,11 +10,11 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 # 0) Current Handoff Snapshot
 
 ## Latest important commit
-- Current local `HEAD`: `8264631`
-- Latest pushed production recovery commit message:
+- Current local `HEAD`: `ef0250a`
+- Latest pushed auth fix commit:
+  `Fix Google auth redirect and onboarding routing`
+- Previous important production recovery commit:
   `Remove auth schema dependency from runtime`
-- Important auth flow commit just before the recovery:
-  `Fix auth contact completion and role routing`
 
 ## Current backend/auth state
 - The project is no longer using the live JSON mock flow as the main auth/data path.
@@ -73,18 +73,26 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 ## Current auth issues remaining
 
 ### Google login
-- Code is wired.
-- Main remaining issues are now configuration / final flow validation, not the core routing logic.
+- Website-side auth routing and first-pass callback handling were updated again on 2026-04-20.
+- `NextAuth` now routes auth failures back to `/login` instead of exposing `/api/auth/error` as the user-facing page.
+- Login UI now maps additional Google auth errors like:
+  `OAuthSignin`, `OAuthCallback`, `Configuration`, `AccessDenied`, `Signin`
+- A real callback crash was found and fixed:
+  `Invalid prisma.user.update() invocation ... No record was found for an update`
+- Root cause:
+  `callbacks.signIn` was trying to update Prisma user data before first-time Google users were safely resolved to a DB `User.id`
+- Fix applied:
+  moved the post-login Prisma update from `callbacks.signIn` to `events.signIn`
+  and changed the write to a safer `updateMany`
+- Main remaining issue is now Google OAuth configuration / final production validation, not the core website routing logic.
 - Google login must be tested only on a stable public domain, not on random temporary deployment URLs.
-- The specific error seen was:
-  `redirect_uri_mismatch`
-- That happened because Google was asked to redirect to a temporary deployment URL like:
-  `https://giggifi-website-n6hj6mzkn-thesachinmusics-projects.vercel.app/api/auth/callback/google`
-- Those random deployment URLs should NOT be relied on for Google setup.
-- Recent runtime logs showed Google auth requests succeeding at HTTP level:
-  - `POST /api/auth/signin/google` -> `200`
-  - `GET /api/auth/callback/google` -> `302`
-- Full end-to-end Google sign-in on the real domain still needs manual click testing.
+- The observed sequence on the website was:
+  - click `Continue with Google`
+  - choose Google account
+  - first saw `/api/auth/error` with raw Prisma update failure
+  - after code fix, saw Google-hosted `Error 400: redirect_uri_mismatch`
+- This confirms the remaining blocker is Google Cloud OAuth client configuration.
+- Full end-to-end Google sign-in on the real domain still needs manual click testing after Google Cloud settings are corrected.
 
 ### OTP login
 - OTP now works technically through Twilio Verify for numbers allowed by the Twilio account.
@@ -100,6 +108,8 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 
 ### Vercel env var expectation
 - `NEXTAUTH_URL` should be:
+  `https://giggifi.com`
+- Local `.env.local` had a malformed `NEXTAUTH_URL` entry on 2026-04-20 and was corrected to:
   `https://giggifi.com`
 
 ### Google OAuth authorized JavaScript origins
@@ -140,6 +150,31 @@ This file is a working memory dump for Codex or any coding agent so it can conti
 - `types/next-auth.d.ts`
 - `SETUP_VERCEL_DATABASE.md`
 - `.env.example`
+- `.env.local`
+
+## Important 2026-04-20 follow-up
+- Pushed commit:
+  `ef0250a Fix Google auth redirect and onboarding routing`
+- Commit included:
+  - NextAuth `pages.error = "/login"`
+  - safer Google post-login Prisma update in `events.signIn`
+  - login page Google error-state messaging improvements
+  - onboarding/contact redirect preservation fixes
+  - docs update for `giggifi.com` and `www.giggifi.com` Google OAuth setup
+- Local build passed after the changes.
+- Production still requires manual Google Cloud Console changes.
+- User was guided to update Google Cloud Console here:
+  `APIs & Services -> Credentials -> OAuth 2.0 Client ID`
+- Required Google OAuth authorized JavaScript origins:
+  - `https://giggifi.com`
+  - `https://www.giggifi.com`
+  - `http://localhost:3000`
+- Required Google OAuth redirect URIs:
+  - `https://giggifi.com/api/auth/callback/google`
+  - `https://www.giggifi.com/api/auth/callback/google`
+  - `http://localhost:3000/api/auth/callback/google`
+- User also needs to confirm Vercel production env has:
+  `NEXTAUTH_URL=https://giggifi.com`
 
 ## Important production incident on 2026-04-14
 - Commit `e91a3ef` introduced the new contact-completion + role-routing logic successfully at code level.
