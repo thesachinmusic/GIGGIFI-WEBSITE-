@@ -444,7 +444,7 @@ export function GiggiFiApp({
         session={session}
       />
       {showSubHeader ? (
-        <div className="sticky top-[81px] z-30 border-b border-white/10 bg-[#06020b]/85 backdrop-blur-xl">
+        <div className="sticky top-20 z-40 border-b border-white/10 bg-[#06020b]/85 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6">
             <button
               className="flex items-center gap-2 text-sm text-white/70 transition hover:text-white"
@@ -942,7 +942,7 @@ function SiteHeader({
   session: SessionPayload | null;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#06020b]/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#06020b]/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
         <button onClick={() => onNavigate(isArtistConsole ? "/artist/dashboard" : "/")}>
           <Wordmark />
@@ -1114,13 +1114,34 @@ function NotFoundPanel({
 }
 
 function DropdownNav({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="group relative -mb-6 pb-6">
-      <button className="flex items-center gap-1 transition hover:text-white">
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        className="flex items-center gap-1 py-2 transition hover:text-white"
+      >
         {label}
         <ChevronDown size={14} />
       </button>
-      <div className="pointer-events-none absolute left-0 top-full z-20 w-80 pt-3 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100">
+      <div
+        className={cn(
+          "absolute left-0 top-full z-20 w-80 pt-2 transition",
+          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+        )}
+      >
         <div className="rounded-[1.6rem] border border-white/10 bg-[#0f0918]/95 p-3 shadow-glow backdrop-blur-xl">
           {children}
         </div>
@@ -4133,6 +4154,27 @@ function CartPage({
 }) {
   const subtotal = artists.reduce((sum, artist) => sum + artist.basePriceSolo, 0);
   const pricing = calculatePricing(subtotal);
+  const paymentPath = !artists.length
+    ? "/booker/discover"
+    : !session?.userId
+      ? "/login?next=/payment"
+      : resolveAuthenticatedAppPath(
+          {
+            role: session.role,
+            phone: session.phone,
+            email: session.email,
+            onboardingState: session.onboardingState as
+              | "ROLE_SELECTION"
+              | "PROFILE_IN_PROGRESS"
+              | "COMPLETE"
+              | null,
+            onboardingDraftRole: session.onboardingDraftRole,
+            hasArtistProfile: session.hasArtistProfile,
+            hasBookerProfile: session.hasBookerProfile,
+          },
+          "/payment",
+        );
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <GlassCard className="space-y-4">
@@ -4159,8 +4201,8 @@ function CartPage({
           Client pays the full amount plus tax. Funds are held in escrow and artist payout releases only after successful event completion, platform fee deduction, and status confirmation.
         </div>
         <div className="flex flex-wrap gap-3">
-          <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onNavigate(session?.role === "BOOKER" ? "/payment" : "/login?next=/payment")}>
-            Proceed to Payment
+          <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onNavigate(paymentPath)}>
+            {artists.length ? "Proceed to Payment" : "Browse Artists"}
           </button>
           <button className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white" onClick={() => onNavigate("/booker/discover")}>
             Add More Artists
@@ -4197,17 +4239,51 @@ function PaymentPage({
   const selectedArtists = artists.filter((artist) => cart?.artistIds.includes(artist.id));
   const subtotal = selectedArtists.reduce((sum, artist) => sum + artist.basePriceSolo, 0);
   const pricing = calculatePricing(subtotal);
+  const paymentRedirectPath = session?.userId
+    ? resolveAuthenticatedAppPath(
+        {
+          role: session.role,
+          phone: session.phone,
+          email: session.email,
+          onboardingState: session.onboardingState as
+            | "ROLE_SELECTION"
+            | "PROFILE_IN_PROGRESS"
+            | "COMPLETE"
+            | null,
+          onboardingDraftRole: session.onboardingDraftRole,
+          hasArtistProfile: session.hasArtistProfile,
+          hasBookerProfile: session.hasBookerProfile,
+        },
+        "/payment",
+      )
+    : "/login?next=/payment";
 
   if (!session?.userId || session.role !== "BOOKER" || !session.hasBookerProfile) {
     return (
       <GlassCard className="mx-auto max-w-2xl space-y-5 text-center">
-        <div className="text-3xl font-black">Login required before payment</div>
+        <div className="text-3xl font-black">Booker access required before payment</div>
         <p className="text-white/70">
           Your selected artists are saved. Continue as a booker to review payment, escrow, and confirmation.
         </p>
         <div className="flex justify-center">
-          <button onClick={() => onNavigate("/login?next=/payment")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
-            Login as Booker
+          <button onClick={() => onNavigate(paymentRedirectPath)} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+            Continue as Booker
+          </button>
+        </div>
+      </GlassCard>
+    );
+  }
+
+  if (!selectedArtists.length) {
+    return (
+      <GlassCard className="mx-auto max-w-2xl space-y-5 text-center">
+        <div className="text-3xl font-black">Your cart is empty</div>
+        <p className="text-white/70">
+          Add at least one artist to cart before opening payment.
+        </p>
+        <div className="flex justify-center">
+          <button onClick={() => onNavigate("/booker/discover")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+            Browse Artists
           </button>
         </div>
       </GlassCard>
