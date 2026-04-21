@@ -212,6 +212,24 @@ function resolveBookerContinuationPath(
   return `/onboarding/choice?next=${safeNextPath}`;
 }
 
+function buildBookerArtistProfilePath(
+  artistId: string,
+  options?: { occasion?: string; city?: string },
+) {
+  const params = new URLSearchParams();
+
+  if (options?.occasion) {
+    params.set("occasion", options.occasion);
+  }
+
+  if (options?.city) {
+    params.set("city", options.city);
+  }
+
+  const query = params.toString();
+  return query ? `/booker/artist/${artistId}?${query}` : `/booker/artist/${artistId}`;
+}
+
 function pageName(slug: string[]) {
   const joined = slug.join("/");
   if (!joined) return "Home";
@@ -1965,10 +1983,16 @@ function SocialPage({ onNavigate }: { onNavigate: (path: string) => void }) {
 
 function ArtistCard({
   artist,
+  profilePath,
+  selectedCity,
+  selectedOccasion,
   onAddToCart,
   onNavigate,
 }: {
   artist: ArtistRecord;
+  profilePath?: string;
+  selectedCity?: string;
+  selectedOccasion?: string;
   onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
@@ -2026,13 +2050,19 @@ function ArtistCard({
         <div className="mt-5 flex gap-3">
           <button
             className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-white"
-            onClick={() => onNavigate(`/booker/artist/${artist.id}`)}
+            onClick={() => onNavigate(profilePath ?? `/booker/artist/${artist.id}`)}
           >
             View Profile
           </button>
           <button
             className={`${gradientClass} rounded-2xl px-4 py-3 font-semibold text-black`}
-            onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}
+            onClick={() =>
+              onAddToCart(
+                artist.id,
+                selectedOccasion ?? "Wedding",
+                selectedCity ?? artist.city,
+              )
+            }
           >
             Book
           </button>
@@ -3326,6 +3356,7 @@ function BookerDiscoveryWorkspace({
         artists={localFeaturedArtists}
         emptyMessage={`No local artists matched this search in ${city}. Try another city or clear the search.`}
         selectedOccasion={selectedOccasion.label}
+        selectedCity={city}
         onAddToCart={onAddToCart}
         onNavigate={onNavigate}
       />
@@ -3336,6 +3367,7 @@ function BookerDiscoveryWorkspace({
         artists={premiumArtists}
         emptyMessage="No premium artists matched this search yet."
         selectedOccasion={selectedOccasion.label}
+        selectedCity={city}
         onAddToCart={onAddToCart}
         onNavigate={onNavigate}
       />
@@ -3346,6 +3378,7 @@ function BookerDiscoveryWorkspace({
         artists={panIndiaArtists}
         emptyMessage="No pan-India artists matched this search yet."
         selectedOccasion={selectedOccasion.label}
+        selectedCity={city}
         onAddToCart={onAddToCart}
         onNavigate={onNavigate}
       />
@@ -3361,6 +3394,7 @@ function BookerArtistSection({
   artists,
   emptyMessage,
   selectedOccasion,
+  selectedCity,
   onAddToCart,
   onNavigate,
 }: {
@@ -3369,6 +3403,7 @@ function BookerArtistSection({
   artists: ArtistRecord[];
   emptyMessage: string;
   selectedOccasion: string;
+  selectedCity: string;
   onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
@@ -3389,6 +3424,12 @@ function BookerArtistSection({
             <ArtistCard
               key={artist.id}
               artist={artist}
+              profilePath={buildBookerArtistProfilePath(artist.id, {
+                occasion: selectedOccasion,
+                city: selectedCity,
+              })}
+              selectedCity={selectedCity}
+              selectedOccasion={selectedOccasion}
               onAddToCart={(artistId, _, artistCity) =>
                 onAddToCart(artistId, selectedOccasion, artistCity)
               }
@@ -3440,7 +3481,10 @@ function ArtistProfilePage({
   onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
+  const searchParams = useSearchParams();
   const artistReviews = reviews.filter((review) => review.toId === artist.userId);
+  const selectedOccasion = getOccasionOption(searchParams.get("occasion")).label;
+  const selectedCity = searchParams.get("city") || artist.city;
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-[2rem] border border-white/10">
@@ -3469,7 +3513,7 @@ function ArtistProfilePage({
             <button className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}/enquiry`)}>
               Send Enquiry
             </button>
-            <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}>
+            <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, selectedOccasion, selectedCity)}>
               Book Now
             </button>
           </div>
@@ -3551,6 +3595,19 @@ function ArtistProfilePage({
             <div className="text-xl font-bold">Book {artist.stageName}</div>
             <p className="mt-2 text-sm text-white/60">Quotes, approvals, escrow status, and payout release stay visible to both sides in one tracked GiggiFi flow.</p>
             <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/45">Booking context</div>
+              <div className="mt-3 grid gap-3 text-sm text-white/75 md:grid-cols-2">
+                <div>
+                  <div className="text-white/45">Occasion</div>
+                  <div className="mt-1 font-semibold text-white">{selectedOccasion}</div>
+                </div>
+                <div>
+                  <div className="text-white/45">Event city</div>
+                  <div className="mt-1 font-semibold text-white">{selectedCity}</div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
               <div className="text-sm font-semibold text-white">Performance highlights</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {[...artist.performanceTypes, ...artist.languages].slice(0, 5).map((item) => (
@@ -3564,7 +3621,7 @@ function ArtistProfilePage({
               <button className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}/enquiry`)}>
                 Send Enquiry
               </button>
-              <button className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}>
+              <button className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, selectedOccasion, selectedCity)}>
                 Book Now
               </button>
             </div>
@@ -4516,17 +4573,6 @@ function PaymentPage({
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <GlassCard className="space-y-5">
         <div className="text-3xl font-black">Payment</div>
-        <div className="flex flex-wrap gap-2">
-          {(["UPI", "Card", "Netbanking"] as const).map((item) => (
-            <button
-              key={item}
-              onClick={() => setMethod(item)}
-              className={cn("rounded-full px-4 py-2 text-sm", method === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
         {success ? (
           <div className="space-y-4 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-6">
             <div className="text-2xl font-black text-emerald-200">Booking confirmed</div>
@@ -4561,33 +4607,47 @@ function PaymentPage({
               Return to Booker Dashboard
             </button>
           </div>
-        ) : null}
-        <div className="rounded-[1.5rem] bg-black/20 p-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Holder name" value={holderName} onChange={setHolderName} />
-            <Field label={method === "UPI" ? "UPI ID" : "Card number"} value={cardNumber} onChange={setCardNumber} />
-            <Field label={method === "Netbanking" ? "Bank name" : "Expiry"} value={expiry} onChange={setExpiry} />
-            <Field label={method === "UPI" ? "Mobile number" : "CVV"} value={cvv} onChange={setCvv} />
-          </div>
-        </div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
-          Payment summary:
-          <div className="mt-3 space-y-2">
-            <FeeRow label="Artist fees" value={pricing.artistFee} />
-            <FeeRow label="Platform fee" value={pricing.platformFee} />
-            <FeeRow label="GST on platform fee" value={pricing.gstAmount} />
-            <FeeRow label="Total payable" value={pricing.total} strong />
-          </div>
-        </div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
-          Tax note: GST is applied on the platform fee and shown before confirmation so the full payable amount is clear to the booker.
-        </div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
-          Escrow note: client pays the full amount plus tax, GiggiFi holds the money securely, and payout is released after the performance succeeds and commission plus tax are accounted for.
-        </div>
-        <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => setSuccess(true)}>
-          Pay Securely
-        </button>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {(["UPI", "Card", "Netbanking"] as const).map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setMethod(item)}
+                  className={cn("rounded-full px-4 py-2 text-sm", method === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div className="rounded-[1.5rem] bg-black/20 p-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Holder name" value={holderName} onChange={setHolderName} />
+                <Field label={method === "UPI" ? "UPI ID" : "Card number"} value={cardNumber} onChange={setCardNumber} />
+                <Field label={method === "Netbanking" ? "Bank name" : "Expiry"} value={expiry} onChange={setExpiry} />
+                <Field label={method === "UPI" ? "Mobile number" : "CVV"} value={cvv} onChange={setCvv} />
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+              Payment summary:
+              <div className="mt-3 space-y-2">
+                <FeeRow label="Artist fees" value={pricing.artistFee} />
+                <FeeRow label="Platform fee" value={pricing.platformFee} />
+                <FeeRow label="GST on platform fee" value={pricing.gstAmount} />
+                <FeeRow label="Total payable" value={pricing.total} strong />
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+              Tax note: GST is applied on the platform fee and shown before confirmation so the full payable amount is clear to the booker.
+            </div>
+            <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+              Escrow note: client pays the full amount plus tax, GiggiFi holds the money securely, and payout is released after the performance succeeds and commission plus tax are accounted for.
+            </div>
+            <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => setSuccess(true)}>
+              Confirm Booking and Hold in Escrow
+            </button>
+          </>
+        )}
       </GlassCard>
       <GlassCard className="space-y-4">
         <StatCard title="Artists count" value={String(selectedArtists.length)} note={cart?.occasion ?? "Selected shortlist"} />
