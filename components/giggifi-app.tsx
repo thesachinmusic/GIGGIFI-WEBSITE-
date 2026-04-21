@@ -93,8 +93,17 @@ type CartDraft = {
   city?: string;
 };
 
+type OccasionOption = {
+  label: (typeof occasions)[number][0];
+  pageKey: (typeof occasions)[number][1];
+};
+
 const guestCartStorageKey = "giggifi-guest-cart";
 const serviceRouteKeys = services.map((service) => service[1]);
+const occasionOptions: OccasionOption[] = occasions.map(([label, pageKey]) => ({
+  label,
+  pageKey,
+}));
 
 const cityOptions = ["Mumbai", "Pune", "Bengaluru", "Delhi"];
 const languageOptions = [
@@ -141,6 +150,66 @@ const pageTransitions = {
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return twMerge(clsx(classes));
+}
+
+function getOccasionOption(label?: string | null) {
+  return (
+    occasionOptions.find((occasion) => occasion.label === label) ??
+    occasionOptions[2]
+  );
+}
+
+function matchesArtistSearch(artist: ArtistRecord, query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+
+  return [
+    artist.stageName,
+    artist.category,
+    artist.city,
+    artist.state,
+    artist.tagline,
+    artist.featuredTag,
+    artist.genres.join(" "),
+    artist.languages.join(" "),
+    artist.performanceTypes.join(" "),
+    artist.serviceableStates.join(" "),
+    artist.serviceableStates.length > 1 ? "pan india" : "",
+    artist.kycStatus === "APPROVED" ? "verified" : "",
+  ]
+    .join(" ")
+    .toLowerCase()
+    .includes(normalized);
+}
+
+function isPremiumArtist(artist: ArtistRecord) {
+  return (
+    artist.rating >= 4.8 ||
+    artist.basePriceSolo >= 30000 ||
+    artist.totalBookings >= 25 ||
+    /premium|featured|celebrity|luxury/i.test(artist.featuredTag)
+  );
+}
+
+function resolveBookerContinuationPath(
+  session: SessionPayload | null,
+  nextPath = "/booker/dashboard",
+) {
+  const safeNextPath = encodeURIComponent(nextPath);
+
+  if (!session?.userId) {
+    return `/login?next=${safeNextPath}`;
+  }
+
+  if (session.role === "BOOKER" && session.hasBookerProfile) {
+    return nextPath;
+  }
+
+  if (session.role === "BOOKER") {
+    return `/onboarding/booker?next=${safeNextPath}`;
+  }
+
+  return `/onboarding/choice?next=${safeNextPath}`;
 }
 
 function pageName(slug: string[]) {
@@ -356,8 +425,8 @@ export function GiggiFiApp({
         occasion: occasion ?? current.occasion ?? "Wedding",
         city: city ?? current.city ?? "Mumbai",
       }));
-      setToast("Artist saved. Login as a booker to continue checkout.");
-      go("/login?next=/cart");
+      setToast("Artist added to cart.");
+      go("/cart");
       return;
     }
 
@@ -367,8 +436,8 @@ export function GiggiFiApp({
         occasion: occasion ?? current.occasion ?? "Wedding",
         city: city ?? current.city ?? "Mumbai",
       }));
-      setToast("Choose the booker flow to continue with cart and payment.");
-      go("/onboarding/choice?next=/cart");
+      setToast("Artist added to cart. Continue as a booker from cart to move ahead.");
+      go("/cart");
       return;
     }
 
@@ -378,7 +447,7 @@ export function GiggiFiApp({
         body: JSON.stringify({ artistId, action: "add", occasion, city }),
       });
       setToast("Added to cart.");
-      await refreshFromServer();
+      await refreshFromServer("/cart");
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Could not update cart.");
     }
@@ -493,7 +562,12 @@ export function GiggiFiApp({
           ) : null}
 
           {routeKey === "artists" ? (
-            <DiscoverPage artists={db.artists} onAddToCart={addToCart} onNavigate={go} />
+            <DiscoverPage
+              artists={db.artists}
+              cartArtistCount={effectiveCart?.artistIds.length ?? 0}
+              onAddToCart={addToCart}
+              onNavigate={go}
+            />
           ) : null}
 
           {routeKey === "verified" ? (
@@ -574,14 +648,19 @@ export function GiggiFiApp({
           {routeKey === "booker/dashboard" ? (
             <BookerDashboardPage
               artists={db.artists}
-              cartArtistCount={viewerCart?.artistIds.length ?? 0}
+              cartArtistCount={effectiveCart?.artistIds.length ?? 0}
               onAddToCart={addToCart}
               onNavigate={go}
             />
           ) : null}
 
           {routeKey === "booker/discover" ? (
-            <DiscoverPage artists={db.artists} onAddToCart={addToCart} onNavigate={go} />
+            <DiscoverPage
+              artists={db.artists}
+              cartArtistCount={effectiveCart?.artistIds.length ?? 0}
+              onAddToCart={addToCart}
+              onNavigate={go}
+            />
           ) : null}
 
           {slug[0] === "booker" && slug[1] === "artist" && slug.length === 3 ? (
@@ -589,6 +668,7 @@ export function GiggiFiApp({
               <ArtistProfilePage
                 artist={selectedArtist}
                 reviews={db.reviews}
+                onAddToCart={addToCart}
                 onNavigate={go}
               />
             ) : (
@@ -1892,13 +1972,33 @@ function ArtistCard({
   onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
+  const premium = isPremiumArtist(artist);
   return (
     <GlassCard className="group overflow-hidden p-0">
       <div className="relative overflow-hidden">
-        <img src={artist.coverPhoto} alt={artist.stageName} className="h-64 w-full object-cover transition duration-500 group-hover:scale-105" />
+        <img
+          src={artist.profilePhoto}
+          alt={artist.stageName}
+          className="h-72 w-full object-cover transition duration-500 group-hover:scale-105"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-        <div className="absolute bottom-4 left-4 rounded-full bg-[#ffb340]/20 px-3 py-1 text-xs font-medium text-[#ffb340]">
-          {artist.featuredTag}
+        <div className="absolute left-4 right-4 top-4 flex flex-wrap gap-2">
+          {artist.kycStatus === "APPROVED" ? (
+            <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-medium text-emerald-200">
+              Verified
+            </span>
+          ) : null}
+          {premium ? (
+            <span className="rounded-full bg-[#ffb340]/20 px-3 py-1 text-xs font-medium text-[#ffb340]">
+              Premium
+            </span>
+          ) : null}
+          <span className="rounded-full bg-black/45 px-3 py-1 text-xs font-medium text-white/85">
+            {artist.featuredTag}
+          </span>
+        </div>
+        <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-medium text-white/90">
+          Starting {formatINR(artist.basePriceSolo)}
         </div>
       </div>
       <div className="p-6">
@@ -1913,20 +2013,28 @@ function ArtistCard({
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          {artist.genres.slice(0, 3).map((genre) => (
+          {[artist.state, ...artist.genres].slice(0, 3).map((genre) => (
             <span key={genre} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
               {genre}
             </span>
           ))}
         </div>
-        <div className="mt-4 text-lg font-bold text-[#ffb340]">{formatINR(artist.basePriceSolo)}</div>
-        <div className="mt-1 text-sm text-white/60">{artist.tagline}</div>
+        <div className="mt-4 text-sm text-white/65">{artist.tagline}</div>
+        <div className="mt-4 text-sm text-white/60">
+          {artist.languages.slice(0, 2).join(" • ")} • {artist.performanceTypes.slice(0, 2).join(" • ")}
+        </div>
         <div className="mt-5 flex gap-3">
-          <button className={`${gradientClass} rounded-2xl px-4 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}>
-            Add to cart
+          <button
+            className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-white"
+            onClick={() => onNavigate(`/booker/artist/${artist.id}`)}
+          >
+            View Profile
           </button>
-          <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}`)}>
-            Book now
+          <button
+            className={`${gradientClass} rounded-2xl px-4 py-3 font-semibold text-black`}
+            onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}
+          >
+            Book
           </button>
         </div>
       </div>
@@ -2997,229 +3105,339 @@ function BookerDashboardPage({
   onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
-  const [city, setCity] = useState("Mumbai");
-  const [query, setQuery] = useState("");
-  const [selectedOccasion, setSelectedOccasion] = useState<(typeof occasions)[number][0]>(
-    occasions[2][0],
-  );
-  const localArtists = artists
-    .filter((artist) => artist.city === city)
-    .filter((artist) =>
-      [artist.stageName, artist.category, artist.city, artist.tagline].join(" ").toLowerCase().includes(query.toLowerCase()),
-    );
-  const panIndiaArtists = artists
-    .filter((artist) => artist.city !== city)
-    .filter((artist) =>
-      [artist.stageName, artist.category, artist.city, artist.tagline].join(" ").toLowerCase().includes(query.toLowerCase()),
-    )
-    .slice(0, 4);
-  const featuredArtists = (localArtists.length ? localArtists : artists).slice(0, 4);
-  const premiumArtists = (localArtists.length ? localArtists : artists)
-    .slice()
-    .sort((left, right) => right.rating - left.rating || right.basePriceSolo - left.basePriceSolo)
-    .slice(0, 3);
   return (
-    <div className="space-y-6">
-      <GlassCard className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-6">
-          <div>
-            <SectionLabel>Booker Dashboard</SectionLabel>
-            <div className="mt-2 text-3xl font-black md:text-5xl">Search artists, sort by occasion, and move confidently into escrow-backed payment.</div>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <SectionLabel>Occasion selector</SectionLabel>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {occasions.map((occasion) => (
-                  <button
-                    key={occasion[1]}
-                    onClick={() => setSelectedOccasion(occasion[0])}
-                    className={cn(
-                      "rounded-full px-4 py-2 text-sm",
-                      selectedOccasion === occasion[0]
-                        ? `${gradientClass} text-black`
-                        : "border border-white/10 bg-white/5 text-white/70",
-                    )}
-                  >
-                    {occasion[0]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <SectionLabel>Search artist</SectionLabel>
-              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                <Search size={18} className="text-[#ffb340]" />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search artist, genre, city..." className="w-full bg-transparent outline-none placeholder:text-white/30" />
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {cityOptions.map((item) => (
-                  <button key={item} onClick={() => setCity(item)} className={cn("rounded-full px-4 py-2 text-sm", city === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
-          <StatCard title="Current occasion" value={selectedOccasion} note="Shortlist and pricing tuned for this brief" />
-          <StatCard title="Artists in cart" value={String(cartArtistCount)} note="Open cart and payment summary" onClick={() => onNavigate("/cart")} />
-          <StatCard title="Escrow note" value="Held safely" note="Client pays full amount + tax before performance" />
-        </div>
-      </GlassCard>
-
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <GlassCard className="space-y-4">
-          <div className="text-2xl font-black">Featured artists in {city}</div>
-          {featuredArtists.map((artist) => (
-            <div key={artist.id} className="flex flex-col gap-4 rounded-[1.5rem] bg-black/20 p-4 md:flex-row md:items-center">
-              <img src={artist.profilePhoto} alt={artist.stageName} className="h-16 w-16 rounded-2xl object-cover" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="truncate font-semibold">{artist.stageName}</div>
-                  <span className="rounded-full bg-[#ffb340]/20 px-2 py-1 text-[10px] text-[#ffb340]">{artist.featuredTag}</span>
-                </div>
-                <div className="text-sm text-white/60">{artist.category} · {artist.city}</div>
-                <div className="text-sm text-white/60">{artist.tagline}</div>
-              </div>
-              <div className="text-right text-sm text-white/80">
-                <div className="flex items-center gap-1"><Star size={14} fill="currentColor" className="text-[#ffb340]" /> {artist.rating}</div>
-                <div>{formatINR(artist.basePriceSolo)}</div>
-              </div>
-              <div className="flex gap-2">
-                <button className={`${gradientClass} rounded-2xl px-4 py-2 text-sm font-semibold text-black`} onClick={() => onAddToCart(artist.id, selectedOccasion, artist.city)}>
-                  Add to cart
-                </button>
-                <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}`)}>
-                  Open profile
-                </button>
-              </div>
-            </div>
-          ))}
-        </GlassCard>
-
-        <div className="space-y-6">
-          <GlassCard className="space-y-4">
-            <div className="text-2xl font-black">Premium artists near {city}</div>
-            {premiumArtists.map((artist) => (
-              <div key={artist.id} className="flex items-center gap-3 rounded-2xl bg-black/20 p-3">
-                <img src={artist.profilePhoto} alt={artist.stageName} className="h-12 w-12 rounded-2xl object-cover" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">{artist.stageName}</div>
-                  <div className="text-sm text-white/60">{artist.genres.slice(0, 2).join(" • ")}</div>
-                </div>
-                <button className={`${gradientClass} rounded-2xl px-3 py-2 text-sm font-semibold text-black`} onClick={() => onAddToCart(artist.id, selectedOccasion, artist.city)}>
-                  Book
-                </button>
-              </div>
-            ))}
-          </GlassCard>
-
-          <GlassCard className="space-y-4">
-            <div className="text-2xl font-black">Pan-India artists</div>
-            {panIndiaArtists.map((artist) => (
-              <div key={artist.id} className="flex items-center justify-between gap-3 rounded-2xl bg-black/20 p-3">
-                <div>
-                  <div className="font-semibold">{artist.stageName}</div>
-                  <div className="text-sm text-white/60">{artist.category} · {artist.city}</div>
-                </div>
-                <button className="rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}`)}>
-                  View
-                </button>
-              </div>
-            ))}
-          </GlassCard>
-        </div>
-      </div>
-
-      <GlassCard className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Client pays full amount + tax into escrow.</div>
-        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Funds stay protected until successful event completion.</div>
-        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Artist payout is released after platform commission and tax deduction.</div>
-        <div className="rounded-[1.4rem] bg-black/20 p-4 text-sm text-white/75">Save the booking to calendar and track every status change inside GiggiFi.</div>
-      </GlassCard>
-    </div>
+    <BookerDiscoveryWorkspace
+      artists={artists}
+      cartArtistCount={cartArtistCount}
+      mode="dashboard"
+      onAddToCart={onAddToCart}
+      onNavigate={onNavigate}
+    />
   );
 }
 
 function DiscoverPage({
   artists,
+  cartArtistCount,
   onAddToCart,
   onNavigate,
 }: {
   artists: ArtistRecord[];
+  cartArtistCount: number;
+  onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <BookerDiscoveryWorkspace
+      artists={artists}
+      cartArtistCount={cartArtistCount}
+      mode="discover"
+      onAddToCart={onAddToCart}
+      onNavigate={onNavigate}
+    />
+  );
+}
+
+function BookerDiscoveryWorkspace({
+  artists,
+  cartArtistCount,
+  mode,
+  onAddToCart,
+  onNavigate,
+}: {
+  artists: ArtistRecord[];
+  cartArtistCount: number;
+  mode: "dashboard" | "discover";
   onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
   const [city, setCity] = useState("Mumbai");
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
-  const [selectedOccasion, setSelectedOccasion] = useState<(typeof occasions)[number][0]>(
-    occasions[2][0],
+  const [selectedOccasionLabel, setSelectedOccasionLabel] = useState(
+    occasionOptions[2]?.label ?? "Wedding",
   );
-  const filtered = artists.filter((artist) => {
-    const cityMatch = artists.some((item) => item.city === city) ? artist.city === city : true;
-    const queryMatch = [artist.stageName, artist.category, artist.city, artist.genres.join(" ")].join(" ").toLowerCase().includes(query.toLowerCase());
-    const categoryMatch = category === "all" || artist.category.toLowerCase().includes(category);
-    return cityMatch && queryMatch && categoryMatch;
-  });
+  const deferredQuery = useDeferredValue(query);
+  const selectedOccasion = getOccasionOption(selectedOccasionLabel);
+  const filteredArtists = useMemo(
+    () => artists.filter((artist) => matchesArtistSearch(artist, deferredQuery)),
+    [artists, deferredQuery],
+  );
+  const localArtists = useMemo(
+    () => filteredArtists.filter((artist) => artist.city === city),
+    [city, filteredArtists],
+  );
+  const localFeaturedArtists = useMemo(
+    () =>
+      (localArtists.length ? localArtists : filteredArtists)
+        .slice()
+        .sort(
+          (left, right) =>
+            Number(isPremiumArtist(right)) - Number(isPremiumArtist(left)) ||
+            right.rating - left.rating ||
+            right.totalBookings - left.totalBookings,
+        )
+        .slice(0, 6),
+    [filteredArtists, localArtists],
+  );
+  const premiumArtists = useMemo(
+    () =>
+      filteredArtists
+        .filter(isPremiumArtist)
+        .slice()
+        .sort(
+          (left, right) =>
+            right.rating - left.rating || right.basePriceSolo - left.basePriceSolo,
+        )
+        .slice(0, 6),
+    [filteredArtists],
+  );
+  const panIndiaArtists = useMemo(
+    () =>
+      filteredArtists
+        .filter(
+          (artist) =>
+            artist.city !== city || artist.serviceableStates.length > 1,
+        )
+        .slice()
+        .sort(
+          (left, right) =>
+            right.serviceableStates.length - left.serviceableStates.length ||
+            right.rating - left.rating,
+        )
+        .slice(0, 6),
+    [city, filteredArtists],
+  );
+  const paymentPath = cartArtistCount > 0 ? "/payment" : "/cart";
+  const heroTitle =
+    mode === "dashboard"
+      ? "Search artists, shortlist faster, and move into escrow-backed payment."
+      : "Discover local, featured, and pan-India artists in one booker flow.";
+  const heroSubtitle =
+    mode === "dashboard"
+      ? "Your Booker Dashboard is now the main working discovery page. Search by artist, category, city, area, or Pan India, then move straight into cart and payment."
+      : "Use the same Booker discovery engine to compare premium profiles, open artist pages, and move directly into cart and payment.";
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-        <div>
-          <SectionLabel>Artists</SectionLabel>
-          <h1 className="mt-2 text-3xl font-black md:text-5xl">Browse verified artists by city, category, and occasion.</h1>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-          <Search size={18} className="text-[#ffb340]" />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search singer, band, dancer, city..." className="w-full bg-transparent outline-none placeholder:text-white/30" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {occasions.map((occasion) => (
+      <GlassCard className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-6">
+          <div>
+            <SectionLabel>
+              {mode === "dashboard" ? "Booker Dashboard" : "Booker Discovery"}
+            </SectionLabel>
+            <h1 className="mt-2 text-3xl font-black md:text-5xl">{heroTitle}</h1>
+            <p className="mt-4 max-w-3xl text-white/70">{heroSubtitle}</p>
+          </div>
+          <div className="rounded-[1.7rem] border border-white/10 bg-black/20 p-4">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+              <Search size={18} className="text-[#ffb340]" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search artist, category, city, area or Pan India"
+                className="w-full bg-transparent outline-none placeholder:text-white/30"
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {cityOptions.map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setCity(item)}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm",
+                    city === item
+                      ? `${gradientClass} text-black`
+                      : "border border-white/10 bg-white/5 text-white/70",
+                  )}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <SectionLabel>Occasion selector</SectionLabel>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {occasionOptions.map((occasion) => (
+                <button
+                  key={occasion.label}
+                  onClick={() => setSelectedOccasionLabel(occasion.label)}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm",
+                    selectedOccasion.label === occasion.label
+                      ? `${gradientClass} text-black`
+                      : "border border-white/10 bg-white/5 text-white/70",
+                  )}
+                >
+                  {occasion.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
             <button
-              key={occasion[1]}
-              onClick={() => setSelectedOccasion(occasion[0])}
-              className={cn("rounded-full px-4 py-2 text-sm", selectedOccasion === occasion[0] ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}
+              className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}
+              onClick={() => onNavigate("/cart")}
             >
-              {occasion[0]}
+              Proceed to Cart
             </button>
+            <button
+              className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white"
+              onClick={() => onNavigate(paymentPath)}
+            >
+              Proceed to Payment
+            </button>
+            <button
+              className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white"
+              onClick={() => onNavigate(`/${selectedOccasion.pageKey}`)}
+            >
+              Browse {selectedOccasion.label}
+            </button>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+          <StatCard
+            title="Occasion"
+            value={selectedOccasion.label}
+            note={`Routes into ${selectedOccasion.pageKey}`}
+          />
+          <StatCard
+            title="Selected city"
+            value={city}
+            note="Local artists are prioritized first"
+          />
+          <StatCard
+            title="Artists in cart"
+            value={String(cartArtistCount)}
+            note="Open cart and payment summary"
+            onClick={() => onNavigate("/cart")}
+          />
+          <StatCard
+            title="Results"
+            value={String(filteredArtists.length)}
+            note="Search, compare, and open artist profiles"
+          />
+        </div>
+      </GlassCard>
+
+      <BookerArtistSection
+        title={`Local / Featured artists in ${city}`}
+        subtitle={`Artists suited for ${selectedOccasion.label.toLowerCase()} with premium trust signals and direct booking access.`}
+        artists={localFeaturedArtists}
+        emptyMessage={`No local artists matched this search in ${city}. Try another city or clear the search.`}
+        selectedOccasion={selectedOccasion.label}
+        onAddToCart={onAddToCart}
+        onNavigate={onNavigate}
+      />
+
+      <BookerArtistSection
+        title="Premium artists"
+        subtitle="High-trust profiles with strong ratings, premium positioning, and faster shortlisting."
+        artists={premiumArtists}
+        emptyMessage="No premium artists matched this search yet."
+        selectedOccasion={selectedOccasion.label}
+        onAddToCart={onAddToCart}
+        onNavigate={onNavigate}
+      />
+
+      <BookerArtistSection
+        title="Pan-India artists"
+        subtitle="Artists available beyond the selected city for destination events and wider search coverage."
+        artists={panIndiaArtists}
+        emptyMessage="No pan-India artists matched this search yet."
+        selectedOccasion={selectedOccasion.label}
+        onAddToCart={onAddToCart}
+        onNavigate={onNavigate}
+      />
+
+      <EscrowExplainer />
+    </div>
+  );
+}
+
+function BookerArtistSection({
+  title,
+  subtitle,
+  artists,
+  emptyMessage,
+  selectedOccasion,
+  onAddToCart,
+  onNavigate,
+}: {
+  title: string;
+  subtitle: string;
+  artists: ArtistRecord[];
+  emptyMessage: string;
+  selectedOccasion: string;
+  onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <GlassCard className="space-y-5">
+      <div>
+        <SectionLabel>{title}</SectionLabel>
+        <div className="mt-2 text-2xl font-black">{title}</div>
+        <p className="mt-2 text-white/65">{subtitle}</p>
+      </div>
+      {!artists.length ? (
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-6 text-white/70">
+          {emptyMessage}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {artists.map((artist) => (
+            <ArtistCard
+              key={artist.id}
+              artist={artist}
+              onAddToCart={(artistId, _, artistCity) =>
+                onAddToCart(artistId, selectedOccasion, artistCity)
+              }
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {cityOptions.map((item) => (
-            <button key={item} onClick={() => setCity(item)} className={cn("rounded-full px-4 py-2 text-sm", city === item ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
-              {item}
-            </button>
-            ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setCategory("all")} className={cn("rounded-full px-4 py-2 text-sm", category === "all" ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
-            All artists
-          </button>
-          {artistMenus.map((item) => (
-            <button key={item[0]} onClick={() => setCategory(item[0].toLowerCase())} className={cn("rounded-full px-4 py-2 text-sm", category === item[0].toLowerCase() ? `${gradientClass} text-black` : "border border-white/10 bg-white/5 text-white/70")}>
-              {item[0]}
-            </button>
-          ))}
+      )}
+    </GlassCard>
+  );
+}
+
+function EscrowExplainer() {
+  return (
+    <GlassCard className="space-y-5">
+      <div>
+        <SectionLabel>Escrow payment logic</SectionLabel>
+        <div className="mt-2 text-2xl font-black">
+          GiggiFi holds the client payment first, then settles the artist after the event.
         </div>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((artist) => (
-          <ArtistCard key={artist.id} artist={artist} onAddToCart={(artistId, _, artistCity) => onAddToCart(artistId, selectedOccasion, artistCity)} onNavigate={onNavigate} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          "Client pays the full amount plus tax before the event.",
+          "Payment moves into escrow instead of going straight to the artist.",
+          "After successful performance, GiggiFi releases the payout to the artist.",
+          "Commission and tax are deducted before the final artist settlement is completed.",
+        ].map((item) => (
+          <div
+            key={item}
+            className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/75"
+          >
+            {item}
+          </div>
         ))}
       </div>
-    </div>
+    </GlassCard>
   );
 }
 
 function ArtistProfilePage({
   artist,
   reviews,
+  onAddToCart,
   onNavigate,
 }: {
   artist: ArtistRecord;
   reviews: ReviewRecord[];
+  onAddToCart: (artistId: string, occasion?: string, city?: string) => Promise<void>;
   onNavigate: (path: string) => void;
 }) {
   const artistReviews = reviews.filter((review) => review.toId === artist.userId);
@@ -3251,8 +3469,8 @@ function ArtistProfilePage({
             <button className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}/enquiry`)}>
               Send Enquiry
             </button>
-            <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onNavigate(`/booker/artist/${artist.id}/quick-book`)}>
-              Quick Book
+            <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}>
+              Book Now
             </button>
           </div>
         </div>
@@ -3274,6 +3492,17 @@ function ArtistProfilePage({
                   <span key={genre} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">{genre}</span>
                 ))}
               </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                {[
+                  `${artist.totalBookings}+ bookings completed`,
+                  `${artist.minAdvanceBooking} day minimum lead time`,
+                  `${artist.serviceableStates.length > 1 ? "Pan-India" : "Local"} availability`,
+                ].map((item) => (
+                  <div key={item} className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+                    {item}
+                  </div>
+                ))}
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoLine label="Languages" value={artist.languages.join(", ")} />
                 <InfoLine label="Performance types" value={artist.performanceTypes.join(", ")} />
@@ -3286,6 +3515,15 @@ function ArtistProfilePage({
             <div className="grid gap-4 md:grid-cols-2">
               {artist.portfolioPhotos.map((photo) => (
                 <img key={photo} src={photo} alt={artist.stageName} className="h-64 w-full rounded-[1.8rem] border border-white/10 object-cover" />
+              ))}
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {artist.mediaVault.slice(0, 4).map((item) => (
+                <div key={item.label} className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+                  <div className="font-semibold">{item.label}</div>
+                  <div className="mt-2 text-sm text-white/65">{item.description}</div>
+                  <div className="mt-3 text-xs uppercase tracking-[0.18em] text-[#ffb340]">{item.status}</div>
+                </div>
               ))}
             </div>
           </Tabs.Content>
@@ -3312,12 +3550,22 @@ function ArtistProfilePage({
           <GlassCard>
             <div className="text-xl font-bold">Book {artist.stageName}</div>
             <p className="mt-2 text-sm text-white/60">Quotes, approvals, escrow status, and payout release stay visible to both sides in one tracked GiggiFi flow.</p>
+            <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+              <div className="text-sm font-semibold text-white">Performance highlights</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[...artist.performanceTypes, ...artist.languages].slice(0, 5).map((item) => (
+                  <span key={item} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
             <div className="mt-4 space-y-3">
               <button className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white" onClick={() => onNavigate(`/booker/artist/${artist.id}/enquiry`)}>
                 Send Enquiry
               </button>
-              <button className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black`} onClick={() => onNavigate(`/booker/artist/${artist.id}/quick-book`)}>
-                Quick Book
+              <button className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black`} onClick={() => onAddToCart(artist.id, "Wedding", artist.city)}>
+                Book Now
               </button>
             </div>
           </GlassCard>
@@ -4156,24 +4404,9 @@ function CartPage({
   const pricing = calculatePricing(subtotal);
   const paymentPath = !artists.length
     ? "/booker/discover"
-    : !session?.userId
-      ? "/login?next=/payment"
-      : resolveAuthenticatedAppPath(
-          {
-            role: session.role,
-            phone: session.phone,
-            email: session.email,
-            onboardingState: session.onboardingState as
-              | "ROLE_SELECTION"
-              | "PROFILE_IN_PROGRESS"
-              | "COMPLETE"
-              | null,
-            onboardingDraftRole: session.onboardingDraftRole,
-            hasArtistProfile: session.hasArtistProfile,
-            hasBookerProfile: session.hasBookerProfile,
-          },
-          "/payment",
-        );
+    : session?.role === "BOOKER" && session.hasBookerProfile
+      ? "/payment"
+      : resolveBookerContinuationPath(session, "/booker/dashboard");
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -4199,6 +4432,9 @@ function CartPage({
         ))}
         <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
           Client pays the full amount plus tax. Funds are held in escrow and artist payout releases only after successful event completion, platform fee deduction, and status confirmation.
+        </div>
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+          Booking summary: {cart?.occasion ?? "Wedding"} in {cart?.city ?? "Mumbai"} with {artists.length} selected artist{artists.length === 1 ? "" : "s"}.
         </div>
         <div className="flex flex-wrap gap-3">
           <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => onNavigate(paymentPath)}>
@@ -4239,24 +4475,10 @@ function PaymentPage({
   const selectedArtists = artists.filter((artist) => cart?.artistIds.includes(artist.id));
   const subtotal = selectedArtists.reduce((sum, artist) => sum + artist.basePriceSolo, 0);
   const pricing = calculatePricing(subtotal);
-  const paymentRedirectPath = session?.userId
-    ? resolveAuthenticatedAppPath(
-        {
-          role: session.role,
-          phone: session.phone,
-          email: session.email,
-          onboardingState: session.onboardingState as
-            | "ROLE_SELECTION"
-            | "PROFILE_IN_PROGRESS"
-            | "COMPLETE"
-            | null,
-          onboardingDraftRole: session.onboardingDraftRole,
-          hasArtistProfile: session.hasArtistProfile,
-          hasBookerProfile: session.hasBookerProfile,
-        },
-        "/payment",
-      )
-    : "/login?next=/payment";
+  const paymentRedirectPath = resolveBookerContinuationPath(
+    session,
+    "/booker/dashboard",
+  );
 
   if (!session?.userId || session.role !== "BOOKER" || !session.hasBookerProfile) {
     return (
@@ -4307,12 +4529,36 @@ function PaymentPage({
         </div>
         {success ? (
           <div className="space-y-4 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-6">
-            <div className="text-2xl font-black text-emerald-200">Payment summary recorded</div>
+            <div className="text-2xl font-black text-emerald-200">Booking confirmed</div>
             <p className="text-sm text-emerald-100">
-              Your booking request has moved into a confirmation-ready state. Funds are treated as escrow-bound in the product flow, and the final payout release happens after successful event completion.
+              Your payment is marked as escrow-held in the Booker flow. The booking is saved, the event is tracked, and final payout is released to the artist only after successful performance.
             </p>
-            <button onClick={() => onNavigate("/booker/bookings")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
-              View Booker Workspace
+            <div className="rounded-[1.5rem] border border-emerald-300/20 bg-black/20 p-5 text-left text-sm text-emerald-50">
+              <div className="flex items-center gap-2 font-semibold text-emerald-100">
+                <CalendarDays size={16} />
+                Save-to-calendar style confirmation
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-emerald-200/70">Occasion</div>
+                  <div className="mt-1">{cart?.occasion ?? "Wedding"}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-emerald-200/70">City</div>
+                  <div className="mt-1">{cart?.city ?? "Mumbai"}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-emerald-200/70">Artists</div>
+                  <div className="mt-1">{selectedArtists.map((artist) => artist.stageName).join(", ")}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-emerald-200/70">Status</div>
+                  <div className="mt-1">Confirmed and saved in your GiggiFi booking flow</div>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => onNavigate("/booker/dashboard")} className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`}>
+              Return to Booker Dashboard
             </button>
           </div>
         ) : null}
@@ -4334,6 +4580,9 @@ function PaymentPage({
           </div>
         </div>
         <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
+          Tax note: GST is applied on the platform fee and shown before confirmation so the full payable amount is clear to the booker.
+        </div>
+        <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-5 text-sm text-white/70">
           Escrow note: client pays the full amount plus tax, GiggiFi holds the money securely, and payout is released after the performance succeeds and commission plus tax are accounted for.
         </div>
         <button className={`${gradientClass} rounded-2xl px-6 py-3 font-semibold text-black`} onClick={() => setSuccess(true)}>
@@ -4344,6 +4593,9 @@ function PaymentPage({
         <StatCard title="Artists count" value={String(selectedArtists.length)} note={cart?.occasion ?? "Selected shortlist"} />
         <StatCard title="City" value={cart?.city ?? "Mumbai"} note="Secure checkout enabled" />
         <StatCard title="Total" value={formatINR(pricing.total)} note="Protected before payout release" />
+        <div className="rounded-[1.4rem] border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+          Selected occasion: <span className="font-semibold text-white">{cart?.occasion ?? "Wedding"}</span>
+        </div>
         {selectedArtists.map((artist) => (
           <div key={artist.id} className="rounded-[1.4rem] bg-black/20 p-4">
             <div className="font-semibold">{artist.stageName}</div>

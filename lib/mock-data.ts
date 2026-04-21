@@ -280,6 +280,8 @@ export const occasions = [
   ["Destination Wedding", "weddings"],
   ["Corporate Event", "corporate"],
   ["Club Night", "clubs"],
+  ["College Fest", "college"],
+  ["Hotel / Resort Event", "hotels"],
 ] as const;
 
 export const services: ServiceMenuItem[] = [
