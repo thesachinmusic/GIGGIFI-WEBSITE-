@@ -84,6 +84,7 @@ type Props = {
   authProviders: {
     googleEnabled: boolean;
     otpMode: "twilio" | "preview" | "unavailable";
+    primaryAuthOrigin: string | null;
   };
 };
 
@@ -275,6 +276,14 @@ function pageName(slug: string[]) {
   if (slug[0] === "booking") return "Booking Detail";
   if (slug[0] === "checkout") return "Checkout";
   return slug[slug.length - 1]!.replace(/-/g, " ");
+}
+
+function buildAuthContinuationPath(nextPath?: string | null) {
+  if (!nextPath) {
+    return "/auth/continue";
+  }
+
+  return `/auth/continue?next=${encodeURIComponent(nextPath)}`;
 }
 
 function iconForArtistMenu(name: string) {
@@ -2085,6 +2094,7 @@ function LoginPage({
   authProviders: {
     googleEnabled: boolean;
     otpMode: "twilio" | "preview" | "unavailable";
+    primaryAuthOrigin: string | null;
   };
   onDone: (path: string) => Promise<void>;
 }) {
@@ -2095,8 +2105,11 @@ function LoginPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewOtp, setPreviewOtp] = useState("");
+  const [autoGoogleStarted, setAutoGoogleStarted] = useState(false);
+  const searchParams = useSearchParams();
   const otpUnavailable = authProviders.otpMode === "unavailable";
   const googleUnavailable = !authProviders.googleEnabled;
+  const authContinuationPath = buildAuthContinuationPath(nextPath);
 
   useEffect(() => {
     if (!countdown) return;
@@ -2121,6 +2134,41 @@ function LoginPage({
 
     setError(messages[authError] ?? messages.default);
   }, [authError]);
+
+  useEffect(() => {
+    if (
+      autoGoogleStarted ||
+      authError ||
+      searchParams.get("provider") !== "google" ||
+      googleUnavailable
+    ) {
+      return;
+    }
+
+    if (
+      authProviders.primaryAuthOrigin &&
+      window.location.origin !== authProviders.primaryAuthOrigin
+    ) {
+      const redirectUrl = new URL("/login", authProviders.primaryAuthOrigin);
+      redirectUrl.searchParams.set("provider", "google");
+      if (nextPath) {
+        redirectUrl.searchParams.set("next", nextPath);
+      }
+      window.location.replace(redirectUrl.toString());
+      return;
+    }
+
+    setAutoGoogleStarted(true);
+    void signIn("google", { callbackUrl: authContinuationPath });
+  }, [
+    authContinuationPath,
+    authError,
+    authProviders.primaryAuthOrigin,
+    autoGoogleStarted,
+    googleUnavailable,
+    nextPath,
+    searchParams,
+  ]);
 
   async function sendOtp() {
     if (otpUnavailable) {
@@ -2157,7 +2205,7 @@ function LoginPage({
         phone,
         otp: otp.join(""),
         redirect: false,
-        callbackUrl: nextPath || "/onboarding/choice",
+        callbackUrl: authContinuationPath,
       });
 
       if (!result || result.error) {
@@ -2168,7 +2216,7 @@ function LoginPage({
         );
       }
 
-      await onDone(nextPath || "/onboarding/choice");
+      await onDone(authContinuationPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not verify OTP.");
     } finally {
@@ -2289,7 +2337,20 @@ function LoginPage({
               return;
             }
 
-            void signIn("google", { callbackUrl: nextPath || "/onboarding/choice" });
+            if (
+              authProviders.primaryAuthOrigin &&
+              window.location.origin !== authProviders.primaryAuthOrigin
+            ) {
+              const redirectUrl = new URL("/login", authProviders.primaryAuthOrigin);
+              redirectUrl.searchParams.set("provider", "google");
+              if (nextPath) {
+                redirectUrl.searchParams.set("next", nextPath);
+              }
+              window.location.assign(redirectUrl.toString());
+              return;
+            }
+
+            void signIn("google", { callbackUrl: authContinuationPath });
           }}
         >
           {googleUnavailable ? "Google login unavailable" : "Continue with Google"}

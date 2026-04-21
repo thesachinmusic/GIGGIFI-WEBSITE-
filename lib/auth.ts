@@ -11,6 +11,25 @@ import { getOtpMode, verifyOtpChallenge } from "@/lib/otp";
 import { getAuthSessionUser } from "@/lib/services/auth-user-service";
 import { normalizeIndianPhone, verifyOtpSchema } from "@/lib/validations";
 
+export function getPrimaryAuthOrigin() {
+  const rawOrigin =
+    process.env.NEXTAUTH_URL ??
+    process.env.AUTH_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : null);
+
+  if (!rawOrigin) {
+    return null;
+  }
+
+  try {
+    return new URL(rawOrigin).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function isGoogleAuthEnabled() {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
@@ -19,6 +38,7 @@ export function getAuthProviderFlags() {
   return {
     googleEnabled: isGoogleAuthEnabled(),
     otpMode: getOtpMode(),
+    primaryAuthOrigin: getPrimaryAuthOrigin(),
   };
 }
 
