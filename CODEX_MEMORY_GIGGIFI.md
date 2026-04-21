@@ -518,6 +518,209 @@ The user wants:
 - practical step-by-step guidance
 - copy-paste prompts for Codex
 - real working implementation, not dummy actions
+
+---
+
+# 12) Phase 0 Competitive Audit + GiggFi Adaptation Memory
+
+## Reference products audited
+- StarClinch
+- Event Planet
+
+These are reference products only.
+They must NOT be cloned literally in layout, branding, information density, or marketplace behavior.
+GiggFi must remain its own premium dark entertainer marketplace with escrow-first trust logic.
+
+## What StarClinch does well
+- Strong category-first artist discovery
+- Large search-led marketplace behavior
+- City and event-specific discovery entry points
+- Artist profile pages that push conversion quickly
+- Fast CTA model:
+  - view profile
+  - see price
+  - book
+  - post requirement
+- Trust reinforcement through FAQs, reviews, performance facts, and booking guidance
+- Clear split between customer-side booking and artist-side cockpit/jobs
+
+## What Event Planet does well
+- Structured quote/request-led planning flow
+- OTP-first simple login
+- Broad category/package browsing
+- City/budget/package filtering ideas
+- Planning-assistant framing instead of pure directory framing
+- Good use of quotation as a lead capture device
+
+## What should NOT be copied
+- StarClinch:
+  - cluttered SEO-heavy page structure
+  - overly dense navigation
+  - generic “huge directory” feeling
+  - too much repetition
+  - weak premium curation feel
+- Event Planet:
+  - wedding/vendor-directory bias
+  - package-heavy planning model as the core experience
+  - generic vendor marketplace presentation
+  - broad category sprawl that weakens entertainer-booking focus
+
+## GiggFi product reinterpretation
+
+### Homepage direction
+- Keep premium dark GiggFi look
+- Hero must lead into discovery, not just branding
+- Homepage should include:
+  - search by artist/category/city/occasion
+  - local featured artists
+  - premium artists
+  - pan-India artists
+  - trust / escrow explanation
+  - clear role-aware CTAs for Booker and Artist
+- Use StarClinch-like discoverability but with cleaner, more curated premium rails
+- Use Event Planet-like structured requirement capture only where it helps booking clarity
+
+### Artist discovery direction
+- Discovery should be occasion + category + city aware
+- Booker-facing artist cards should be image-led and premium
+- Artist cards should show:
+  - profile image
+  - artist name
+  - category
+  - city
+  - rating
+  - verified/premium cues
+  - starting price
+  - view profile
+  - book / add to cart
+- Discovery sections should prioritize:
+  - featured artists in local area
+  - premium artists in local area
+  - pan-India artists
+
+### Artist profile direction
+- Profile pages should help conversion, not just act as static bios
+- Must surface:
+  - photos
+  - reels/videos
+  - bio
+  - category
+  - city / coverage
+  - rating / review trust
+  - packages / starting price
+  - availability
+  - press kit / media highlights
+  - verified / KYC cues where applicable
+- Trust/payment logic should be visible on profile pages before booking
+
+### Booker flow direction
+- After booker login, first useful page must be Booker Dashboard / booking-discovery dashboard
+- Booker flow should be:
+  1. search / browse artists
+  2. filter by occasion/category/city
+  3. review local featured / premium / pan-India artists
+  4. open artist profile
+  5. enter or confirm event details
+  6. add artist(s) to cart
+  7. review booking summary
+  8. proceed to payment
+  9. receive booking confirmation
+- Event Planet-style quotation thinking can inform the event-details step, but GiggFi should still feel like a premium entertainer marketplace, not a wedding vendor quote directory
+
+### Artist onboarding direction
+- GiggFi artist onboarding must be deeper than competitor basic sign-up
+- If artist is incomplete, onboarding must include:
+  - full name
+  - stage/display name
+  - address
+  - PAN
+  - Aadhaar
+  - KYC status
+  - profile photos
+  - reels
+  - videos
+  - press kit
+  - categories
+  - occasion-wise pricing
+  - city / area coverage
+  - availability
+
+### Artist dashboard direction
+- Artist should land on dashboard first after successful artist login
+- Dashboard should let artist:
+  - upload press kit
+  - upload reels
+  - upload videos
+  - upload photos
+  - manage profile/media
+  - view local enquiries
+  - view pan-India enquiries
+  - accept enquiry
+  - bid on enquiry
+  - view monthly revenue
+  - view shows done
+  - view ratings
+  - view recent gigs / completed work
+
+### Trust and payment direction
+- GiggFi’s core differentiator is not just discovery
+- GiggFi must repeatedly communicate:
+  - verified artists
+  - trust-led booking
+  - client pays full amount + tax
+  - payment is held securely in escrow
+  - after successful performance, payout is released to artist
+  - commission + tax deduction happen before final artist settlement
+  - reliability / cancellation framework is visible and productized
+
+## Routing logic that must remain true
+- Auth method is separate from role
+- Google / OTP only authenticate
+- Role is handled after auth and contact completion
+- Required routing:
+  - unauthenticated -> `/login`
+  - authenticated but missing phone/email -> `/onboarding/contact`
+  - authenticated with contact complete but no resolved role/profile -> `/onboarding/choice`
+  - artist complete -> `/artist/dashboard`
+  - artist incomplete -> `/onboarding/artist`
+  - booker complete -> `/booker/dashboard`
+  - booker incomplete -> `/onboarding/booker`
+- Booker dashboard is the first real booking/discovery workspace
+- Artist dashboard is the first real artist workspace
+
+## Current phased implementation direction
+- Phase 1:
+  bug fixing / stabilization / sticky nav / compile issues / dead buttons
+- Phase 2:
+  Booker flow
+  - dashboard as main discovery page
+  - search/filter/discovery
+  - artist profile
+  - cart
+  - payment summary
+  - escrow messaging
+- Phase 3:
+  artist onboarding + artist dashboard
+  - media uploads
+  - KYC flow
+  - pricing / coverage / availability
+  - enquiries / bids / stats
+- Phase 4:
+  premium polish + trust pages
+  - homepage refinement
+  - trust / cancellation / legal pages
+  - payment polish
+  - premium city/category landers
+
+## Important guardrails for future sessions
+- Do not rebuild the project from scratch when user asks for iterative phase work
+- Keep current structure where possible
+- Keep sticky header behavior working
+- Keep premium dark GiggFi style
+- Avoid duplicate declarations and JSX regressions
+- Do not copy competitor UI literally
+- Use competitor products as UX/product references only
+- Use local project docs and routing code as source of truth for GiggFi business logic
 - strong premium UI
 - artist images instead of generic icons where relevant
 - sticky header behavior fixed
