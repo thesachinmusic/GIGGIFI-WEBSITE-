@@ -7,7 +7,11 @@ import { getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
-import { getOtpMode, verifyOtpChallenge } from "@/lib/otp";
+import {
+  getOtpMode,
+  isOtpTestingBypassEnabled,
+  verifyOtpChallenge,
+} from "@/lib/otp";
 import { getAuthSessionUser } from "@/lib/services/auth-user-service";
 import { normalizeIndianPhone, verifyOtpSchema } from "@/lib/validations";
 
@@ -39,6 +43,7 @@ export function getAuthProviderFlags() {
     googleEnabled: isGoogleAuthEnabled(),
     otpMode: getOtpMode(),
     primaryAuthOrigin: getPrimaryAuthOrigin(),
+    otpTestingBypassEnabled: isOtpTestingBypassEnabled(),
   };
 }
 

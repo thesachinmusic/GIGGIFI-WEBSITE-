@@ -1,8 +1,24 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { hasRequiredContactDetails, resolveAuthenticatedAppPath } from "@/lib/auth-routing";
 import { getServerAuthSession } from "@/lib/auth";
 import { saveUserEmailContact } from "@/lib/services/auth-user-service";
 import { completeContactSchema } from "@/lib/validations";
+
+function mapContactEmailError(error: unknown) {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2002" || error.code === "P2025")
+  ) {
+    return "We found an existing GiggiFi account for this email. Please continue with that account or sign in again.";
+  }
+
+  if (error instanceof Error && /unique constraint/i.test(error.message)) {
+    return "This email is already linked to a GiggiFi account. Please continue with that account.";
+  }
+
+  return error instanceof Error ? error.message : "We could not save your email right now.";
+}
 
 export async function POST(request: Request) {
   const session = await getServerAuthSession();
@@ -47,10 +63,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "We could not save your email right now.",
+        error: mapContactEmailError(error),
       },
       { status: 400 },
     );

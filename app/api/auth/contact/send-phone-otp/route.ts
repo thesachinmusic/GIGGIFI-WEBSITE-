@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
-import { issueOtpChallenge } from "@/lib/otp";
+import {
+  isOtpTestingBypassEnabled,
+  isTwilioTrialRestrictionError,
+  issueOtpChallenge,
+} from "@/lib/otp";
 import { sendOtpSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
@@ -32,6 +36,15 @@ export async function POST(request: Request) {
       provider: result.provider,
     });
   } catch (error) {
+    if (isOtpTestingBypassEnabled() && isTwilioTrialRestrictionError(error)) {
+      return NextResponse.json({
+        success: false,
+        fallbackAvailable: true,
+        error:
+          "OTP is currently limited in test mode. Continue in test mode or use a verified number.",
+      });
+    }
+
     return NextResponse.json(
       {
         error:

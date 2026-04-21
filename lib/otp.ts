@@ -83,6 +83,11 @@ function mapTwilioError(error: unknown) {
   return new Error(message);
 }
 
+export function isTwilioTrialRestrictionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.includes("Trial accounts cannot send messages to unverified numbers");
+}
+
 async function sendViaTwilio(phone: string) {
   const { accountSid, authToken, verifyServiceSid } = getTwilioConfig();
   const client = Twilio(accountSid, authToken);
@@ -117,6 +122,11 @@ async function recordFailedAttempt(phone: string) {
 
 export function shouldRevealOtpPreview() {
   return process.env.NODE_ENV !== "production" && process.env.DEV_SHOW_OTP_PREVIEW === "true";
+}
+
+export function isOtpTestingBypassEnabled() {
+  // Dev-only escape hatch for Twilio trial limitations. Keep disabled in production.
+  return process.env.TWILIO_BYPASS_FOR_TESTING === "true";
 }
 
 export function isTwilioOtpEnabled() {

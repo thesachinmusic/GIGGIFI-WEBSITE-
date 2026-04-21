@@ -1,9 +1,37 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { hasRequiredContactDetails, resolveAuthenticatedAppPath } from "@/lib/auth-routing";
 import { getServerAuthSession } from "@/lib/auth";
-import { verifyOtpChallenge } from "@/lib/otp";
+import { isOtpTestingBypassEnabled, verifyOtpChallenge } from "@/lib/otp";
 import { verifyAndSaveUserPhone } from "@/lib/services/auth-user-service";
-import { verifyOtpSchema } from "@/lib/validations";
+import { phoneSchema, verifyOtpSchema } from "@/lib/validations";
+
+function buildRedirect(user: Awaited<ReturnType<typeof verifyAndSaveUserPhone>>, nextPath: string | null) {
+  return resolveAuthenticatedAppPath({
+    role: user.role,
+    phone: user.phone,
+    email: user.email,
+    onboardingState: user.onboardingState,
+    onboardingDraftRole: user.onboardingDraft?.role ?? null,
+    hasArtistProfile: Boolean(user.artistProfile),
+    hasBookerProfile: Boolean(user.bookerProfile),
+  }, nextPath);
+}
+
+function mapVerifyPhoneError(error: unknown) {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2002" || error.code === "P2025")
+  ) {
+    return "We found an existing GiggiFi account for this phone. Please continue with that account or sign in again.";
+  }
+
+  if (error instanceof Error && /unique constraint/i.test(error.message)) {
+    return "This phone number is already linked to a GiggiFi account. Please continue with that account.";
+  }
+
+  return error instanceof Error ? error.message : "Could not verify this phone number.";
+}
 
 export async function POST(request: Request) {
   const session = await getServerAuthSession();
@@ -13,6 +41,43 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const nextPath = typeof body?.nextPath === "string" ? body.nextPath : null;
+  const useTestBypass = body?.useTestBypass === true;
+
+  if (useTestBypass) {
+    if (!isOtpTestingBypassEnabled()) {
+      return NextResponse.json(
+        { error: "Test mode phone bypass is not enabled on this environment." },
+        { status: 403 },
+      );
+    }
+
+    const parsedPhone = phoneSchema.safeParse(body?.phone);
+    if (!parsedPhone.success) {
+      return NextResponse.json(
+        { error: parsedPhone.error.issues[0]?.message ?? "Invalid phone number." },
+        { status: 400 },
+      );
+    }
+
+    try {
+      // Dev-only fallback for Twilio trial accounts that cannot send to public numbers.
+      const user = await verifyAndSaveUserPhone({
+        userId: session.user.id,
+        phone: parsedPhone.data,
+      });
+
+      return NextResponse.json({
+        success: true,
+        bypass: true,
+        user,
+        complete: hasRequiredContactDetails(user),
+        redirect: buildRedirect(user, nextPath),
+      });
+    } catch (error) {
+      return NextResponse.json({ error: mapVerifyPhoneError(error) }, { status: 400 });
+    }
+  }
+
   const parsed = verifyOtpSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -35,21 +100,12 @@ export async function POST(request: Request) {
       success: true,
       user,
       complete: hasRequiredContactDetails(user),
-      redirect: resolveAuthenticatedAppPath({
-        role: user.role,
-        phone: user.phone,
-        email: user.email,
-        onboardingState: user.onboardingState,
-        onboardingDraftRole: user.onboardingDraft?.role ?? null,
-        hasArtistProfile: Boolean(user.artistProfile),
-        hasBookerProfile: Boolean(user.bookerProfile),
-      }, nextPath),
+      redirect: buildRedirect(user, nextPath),
     });
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Could not verify this phone number.",
+        error: mapVerifyPhoneError(error),
       },
       { status: 400 },
     );

@@ -85,6 +85,7 @@ type Props = {
     googleEnabled: boolean;
     otpMode: "twilio" | "preview" | "unavailable";
     primaryAuthOrigin: string | null;
+    otpTestingBypassEnabled: boolean;
   };
 };
 
@@ -2095,6 +2096,7 @@ function LoginPage({
     googleEnabled: boolean;
     otpMode: "twilio" | "preview" | "unavailable";
     primaryAuthOrigin: string | null;
+    otpTestingBypassEnabled: boolean;
   };
   onDone: (path: string) => Promise<void>;
 }) {
@@ -2376,6 +2378,7 @@ function ContactCompletionPage({
   authProviders: {
     googleEnabled: boolean;
     otpMode: "twilio" | "preview" | "unavailable";
+    otpTestingBypassEnabled: boolean;
   };
   nextPath: string | null;
   onDone: (path: string) => Promise<void>;
@@ -2388,7 +2391,9 @@ function ContactCompletionPage({
   const [countdown, setCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [previewOtp, setPreviewOtp] = useState("");
+  const [phoneFallbackAvailable, setPhoneFallbackAvailable] = useState(false);
   const otpUnavailable = authProviders.otpMode === "unavailable";
   const missingPhone = !session?.phone;
   const missingEmail = !session?.email;
@@ -2401,26 +2406,47 @@ function ContactCompletionPage({
 
   async function sendPhoneOtp() {
     if (otpUnavailable) {
-      setError("Phone verification is not configured yet on this environment.");
+      setError(
+        authProviders.otpTestingBypassEnabled
+          ? "OTP is currently limited in test mode. Continue in test mode or use a verified number."
+          : "Phone verification is not configured yet on this environment.",
+      );
+      setPhoneFallbackAvailable(authProviders.otpTestingBypassEnabled);
       return;
     }
 
     setLoading(true);
     setError("");
+    setInfo("");
+    setPhoneFallbackAvailable(false);
 
     try {
       const response = await jsonRequest<{
         success: boolean;
         previewOtp?: string;
+        fallbackAvailable?: boolean;
+        error?: string;
       }>("/api/auth/contact/send-phone-otp", {
         method: "POST",
         body: JSON.stringify({ phone }),
       });
 
+      if (!response.success) {
+        setOtpSent(false);
+        setPreviewOtp("");
+        setPhoneFallbackAvailable(Boolean(response.fallbackAvailable));
+        setError(
+          response.error ??
+            "OTP is currently limited in test mode. Continue in test mode or use a verified number.",
+        );
+        return;
+      }
+
       setOtpSent(true);
       setCountdown(60);
       setPreviewOtp(response.previewOtp ?? "");
       setOtp("");
+      setInfo("OTP sent. Enter the code below to verify your phone.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send OTP.");
     } finally {
@@ -2431,6 +2457,7 @@ function ContactCompletionPage({
   async function verifyPhone() {
     setLoading(true);
     setError("");
+    setInfo("");
 
     try {
       const response = await jsonRequest<{ redirect: string }>("/api/auth/contact/verify-phone", {
@@ -2445,9 +2472,28 @@ function ContactCompletionPage({
     }
   }
 
+  async function continueInTestMode() {
+    setLoading(true);
+    setError("");
+    setInfo("");
+
+    try {
+      const response = await jsonRequest<{ redirect: string }>("/api/auth/contact/verify-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, nextPath, useTestBypass: true }),
+      });
+      await onDone(response.redirect);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not continue in test mode.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function saveEmail() {
     setLoading(true);
     setError("");
+    setInfo("");
 
     try {
       const response = await jsonRequest<{ redirect: string }>("/api/auth/contact", {
@@ -2480,7 +2526,13 @@ function ContactCompletionPage({
             <div>2. Choose Booker or Artist</div>
             <div>3. Continue to the right dashboard or onboarding flow</div>
           </div>
-        </div>
+      </div>
+
+        {missingPhone && authProviders.otpTestingBypassEnabled ? (
+          <div className="rounded-[1.5rem] border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+            OTP is currently limited in test mode. Continue in test mode or use a verified number.
+          </div>
+        ) : null}
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="rounded-[2rem] border border-white/10 bg-black/20 p-6">
@@ -2543,13 +2595,24 @@ function ContactCompletionPage({
               {missingPhone ? (
                 <>
                   {!otpSent ? (
-                    <button
-                      disabled={loading || otpUnavailable}
-                      className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black disabled:opacity-60`}
-                      onClick={sendPhoneOtp}
-                    >
-                      {loading ? "Sending..." : "Send OTP"}
-                    </button>
+                    <div className="space-y-3">
+                      <button
+                        disabled={loading || (otpUnavailable && !authProviders.otpTestingBypassEnabled)}
+                        className={`${gradientClass} w-full rounded-2xl px-5 py-3 font-semibold text-black disabled:opacity-60`}
+                        onClick={sendPhoneOtp}
+                      >
+                        {loading ? "Sending..." : "Send OTP"}
+                      </button>
+                      {phoneFallbackAvailable ? (
+                        <button
+                          disabled={loading}
+                          className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white"
+                          onClick={continueInTestMode}
+                        >
+                          Continue in Test Mode
+                        </button>
+                      ) : null}
+                    </div>
                   ) : (
                     <>
                       <Field
@@ -2575,6 +2638,15 @@ function ContactCompletionPage({
                           Local preview OTP: <span className="font-bold">{previewOtp}</span>
                         </div>
                       ) : null}
+                      {phoneFallbackAvailable ? (
+                        <button
+                          disabled={loading}
+                          className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white"
+                          onClick={continueInTestMode}
+                        >
+                          Continue in Test Mode Instead
+                        </button>
+                      ) : null}
                     </>
                   )}
                 </>
@@ -2587,6 +2659,7 @@ function ContactCompletionPage({
           </div>
         </div>
 
+        {info ? <div className="text-sm text-emerald-300">{info}</div> : null}
         {error ? <div className="text-sm text-red-300">{error}</div> : null}
       </GlassCard>
     </div>
